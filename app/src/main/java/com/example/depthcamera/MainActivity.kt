@@ -8,6 +8,7 @@ import android.hardware.camera2.CameraCharacteristics
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Log
 import android.util.Range
 import android.util.Size
 import android.view.View
@@ -184,7 +185,7 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalCamera2Interop::class)
 private fun mostWideCameraSelector(cameraProvider: ProcessCameraProvider): CameraSelector {
     var widestCamera: CameraInfo? = null
-    var maxFov = 0.0
+    var smallestFocalLength: Float? = null
 
     for (cameraInfo in cameraProvider.availableCameraInfos) {
         if (cameraInfo.lensFacing != CameraSelector.LENS_FACING_BACK) {
@@ -196,20 +197,14 @@ private fun mostWideCameraSelector(cameraProvider: ProcessCameraProvider): Camer
             camera2CameraInfo.getCameraCharacteristic(
                 CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS
             )
-        if (focalLengths != null && focalLengths.size > 1) {
+
+        if (focalLengths != null && focalLengths.size >= 1) {
+            // focalLengths in ascending order: smallest at first
             val focalLength = focalLengths[0]
 
-            val sensorSize =
-                camera2CameraInfo.getCameraCharacteristic(
-                    CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE
-                )
-            if (sensorSize != null) {
-                val fov = calculateFov(focalLength.toDouble(), sensorSize.width.toDouble())
-
-                if (fov > maxFov) {
-                    maxFov = fov
-                    widestCamera = cameraInfo
-                }
+            if (smallestFocalLength == null || focalLength <= smallestFocalLength) {
+	            smallestFocalLength = focalLength
+	            widestCamera = cameraInfo
             }
         }
     }
@@ -227,8 +222,4 @@ private fun performanceResolutionSelector(inputSize: Size): ResolutionSelector {
             )
         )
         .build()
-}
-
-private fun calculateFov(focalLength: Double, sensorWidth: Double): Double {
-    return 2 * atan(sensorWidth / (2 * focalLength))
 }
