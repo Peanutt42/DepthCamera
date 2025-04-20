@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Depth Camera</string>
+    <string name="show_depth">Show depth preview (lowers performance)</string>
+    <string name="show_depth_description">Show Depth Preview Image Button</string>
+    <string name="depth_preview_image_description">Depth Preview Image</string>
+    <string name="allow_camera_permission_notice">Allow Camera Permissions!</string>
+    <string name="allow">Allow</string>
+</resources>
