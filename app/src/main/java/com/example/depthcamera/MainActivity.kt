@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Range
+import android.util.Size
 import android.view.View
 import android.widget.Button
 import android.widget.CheckBox
@@ -73,7 +74,7 @@ class MainActivity : ComponentActivity() {
         allowCameraPermission!!.setOnClickListener { openCameraPermissionSettings() }
 
         cameraFrameAnalyzer =
-            CameraFrameAnalyzer((application as DepthCameraApp).midasDepthModel, depthPreviewImage!!, performanceText!!)
+            CameraFrameAnalyzer((application as DepthCameraApp).depthModel, depthPreviewImage!!, performanceText!!)
 
         showDepthCheckbox = findViewById(R.id.show_depth)
         showDepthCheckbox!!.isChecked = cameraFrameAnalyzer.showDepth
@@ -166,7 +167,7 @@ class MainActivity : ComponentActivity() {
             ImageAnalysis.Builder()
                 .setImageQueueDepth(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .setResolutionSelector(performanceResolutionSelector())
+                .setResolutionSelector(performanceResolutionSelector((application as DepthCameraApp).depthModel.getInputSize()))
                 .build()
         depthAnalysisView!!.setAnalyzer(Executors.newCachedThreadPool(), cameraFrameAnalyzer)
 
@@ -215,12 +216,12 @@ private fun mostWideCameraSelector(cameraProvider: ProcessCameraProvider): Camer
     return widestCamera?.cameraSelector ?: CameraSelector.DEFAULT_BACK_CAMERA
 }
 
-private fun performanceResolutionSelector(): ResolutionSelector {
+private fun performanceResolutionSelector(inputSize: Size): ResolutionSelector {
     return ResolutionSelector.Builder()
         .setAllowedResolutionMode(ResolutionSelector.PREFER_CAPTURE_RATE_OVER_HIGHER_RESOLUTION)
         .setResolutionStrategy(
             ResolutionStrategy(
-                MiDaSDepthModel.INPUT_IMAGE_SIZE,
+                inputSize,
                 ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER
             )
         )

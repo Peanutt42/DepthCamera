@@ -2,18 +2,19 @@ package com.example.depthcamera
 
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.util.Size
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.set
 
-fun depthColorMap(input: FloatArray, inputImageDim: Int): Bitmap {
+fun depthColorMap(input: FloatArray, inputImageSize: Size): Bitmap {
     val performanceScope = PerformanceScope("depthColorMap")
 
-    val bitmap = createBitmap(inputImageDim, inputImageDim, Bitmap.Config.RGB_565)
+    val bitmap = createBitmap(inputImageSize.width, inputImageSize.height, Bitmap.Config.RGB_565)
 
-    for (i in 0 until inputImageDim) {
-        for (j in 0 until inputImageDim) {
-            val depth = input[i * inputImageDim + j].toInt()
-            bitmap[j, i] = depthToInfernoColor(depth)
+    for (y in 0 until inputImageSize.height) {
+        for (x in 0 until inputImageSize.width) {
+            val depth = input[y * inputImageSize.width + x].toInt()
+            bitmap[x, y] = depthToInfernoColor(depth)
         }
     }
 

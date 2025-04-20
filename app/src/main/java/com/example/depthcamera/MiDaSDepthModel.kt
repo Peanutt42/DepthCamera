@@ -17,12 +17,7 @@ import org.tensorflow.lite.support.image.ops.ResizeOp
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
 import org.tensorflow.lite.support.tensorbuffer.TensorBufferFloat
 
-data class DepthPredictionResult(
-    var output: FloatArray,
-    var inferenceTimeMillis: Long
-)
-
-class MiDaSDepthModel() {
+class MiDaSDepthModel() : DepthModel() {
     companion object {
         private const val MODEL_NAME = "lite-model_midas_v2_1_small_1_lite_1.tflite"
         const val INPUT_IMAGE_DIM = 256
@@ -34,32 +29,35 @@ class MiDaSDepthModel() {
 
     private var interpreter: Interpreter
 
-    private val inputTensorProcessor = ImageProcessor.Builder()
-        .add(ResizeOp(INPUT_IMAGE_DIM, INPUT_IMAGE_DIM, ResizeOp.ResizeMethod.BILINEAR))
-        .add(NormalizeOp(NORM_MEAN, NORM_STD))
-        .build()
+    private val inputTensorProcessor =
+        ImageProcessor.Builder()
+            .add(ResizeOp(INPUT_IMAGE_DIM, INPUT_IMAGE_DIM, ResizeOp.ResizeMethod.BILINEAR))
+            .add(NormalizeOp(NORM_MEAN, NORM_STD))
+            .build()
 
     private val outputTensorProcessor = TensorProcessor.Builder().add(DepthScalingOp()).build()
 
     init {
         val loadInterpreterPerformanceScope = PerformanceScope("Load TFLite interpreter")
 
-        val interpreterOptions = Interpreter.Options().apply {
-            val compatibilityList = CompatibilityList()
-            if (compatibilityList.isDelegateSupportedOnThisDevice) {
-                this.addDelegate(GpuDelegate(compatibilityList.bestOptionsForThisDevice))
+        val interpreterOptions =
+            Interpreter.Options().apply {
+                val compatibilityList = CompatibilityList()
+                if (compatibilityList.isDelegateSupportedOnThisDevice) {
+                    this.addDelegate(GpuDelegate(compatibilityList.bestOptionsForThisDevice))
+                }
+                this.numThreads = NUM_THREADS
             }
-            this.numThreads = NUM_THREADS
-        }
-        interpreter = Interpreter(
-            FileUtil.loadMappedFile(DepthCameraApp.applicationContext(), MODEL_NAME),
-            interpreterOptions
-        )
+        interpreter =
+            Interpreter(
+                FileUtil.loadMappedFile(DepthCameraApp.applicationContext(), MODEL_NAME),
+                interpreterOptions
+            )
 
         loadInterpreterPerformanceScope.finish()
     }
 
-    fun predictDepth(input: Bitmap): DepthPredictionResult {
+    override fun predictDepth(input: Bitmap): DepthPredictionResult {
         Log.i(DepthCameraApp.APP_LOG_TAG, "Input resolution: ${input.width} X ${input.height}")
 
         var inputTensor = TensorImage.fromBitmap(input)
@@ -68,10 +66,11 @@ class MiDaSDepthModel() {
 
         inputTensor = inputTensorProcessor.process(inputTensor)
 
-        var outputTensor = TensorBufferFloat.createFixedSize(
-            intArrayOf(INPUT_IMAGE_DIM, INPUT_IMAGE_DIM, 1),
-            DataType.FLOAT32
-        )
+        var outputTensor =
+            TensorBufferFloat.createFixedSize(
+                intArrayOf(INPUT_IMAGE_DIM, INPUT_IMAGE_DIM, 1),
+                DataType.FLOAT32
+            )
 
         interpreter.run(inputTensor.buffer, outputTensor.buffer)
 
@@ -80,6 +79,10 @@ class MiDaSDepthModel() {
         val inferenceTimeMillis = inferencePerformanceScope.finish()
 
         return DepthPredictionResult(outputTensor.floatArray, inferenceTimeMillis)
+    }
+
+    override fun getInputSize(): Size {
+        return INPUT_IMAGE_SIZE
     }
 
     class DepthScalingOp : TensorOperator {

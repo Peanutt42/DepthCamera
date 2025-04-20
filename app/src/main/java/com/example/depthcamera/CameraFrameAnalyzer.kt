@@ -7,7 +7,6 @@ import androidx.annotation.OptIn
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
-import androidx.core.graphics.scale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -20,7 +19,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 
 class CameraFrameAnalyzer(
-    private var depthModel: MiDaSDepthModel,
+    private var depthModel: DepthModel,
     private var depthView: ImageView,
     private var performanceText: TextView,
 ) : ImageAnalysis.Analyzer {
@@ -48,7 +47,7 @@ class CameraFrameAnalyzer(
                             draw(
                                 depthColorMap(
                                     predictionResult.output,
-                                    MiDaSDepthModel.INPUT_IMAGE_DIM
+                                    depthModel.getInputSize()
                                 )
                             )
                         }

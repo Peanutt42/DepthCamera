@@ -12,7 +12,7 @@ class DepthCameraApp : Application() {
 
     lateinit var cameraProviderListenableFuture: ListenableFuture<ProcessCameraProvider>
 
-    lateinit var midasDepthModel: MiDaSDepthModel
+    lateinit var depthModel: DepthModel
 
     init {
         instance = this
@@ -33,7 +33,7 @@ class DepthCameraApp : Application() {
 
         instance = this
 
-        midasDepthModel = MiDaSDepthModel()
+        depthModel = MiDaSDepthModel()
     }
 
     fun initCamera(bindCameraPreviewCallback: (cameraProvider: ProcessCameraProvider) -> Unit) {
