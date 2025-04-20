@@ -60,7 +60,7 @@ class MiDaSDepthModel() {
     }
 
     fun predictDepth(input: Bitmap): DepthPredictionResult {
-        Log.i(MainActivity.APP_LOG_TAG, "Input resolution: ${input.width} X ${input.height}")
+        Log.i(DepthCameraApp.APP_LOG_TAG, "Input resolution: ${input.width} X ${input.height}")
 
         var inputTensor = TensorImage.fromBitmap(input)
 

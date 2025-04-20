@@ -8,7 +8,6 @@ import android.hardware.camera2.CameraCharacteristics
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
-import android.util.Log
 import android.util.Range
 import android.view.View
 import android.widget.Button
@@ -33,17 +32,10 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
-import com.google.common.util.concurrent.ListenableFuture
-import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
 import kotlin.math.atan
 
 class MainActivity : ComponentActivity() {
-    companion object {
-        const val APP_LOG_TAG = "Depth Camera"
-    }
-
-    private lateinit var cameraProviderListenableFuture: ListenableFuture<ProcessCameraProvider>
     private lateinit var cameraFrameAnalyzer: CameraFrameAnalyzer
 
     private var cameraPreview: Preview? = null
@@ -81,7 +73,7 @@ class MainActivity : ComponentActivity() {
         allowCameraPermission!!.setOnClickListener { openCameraPermissionSettings() }
 
         cameraFrameAnalyzer =
-            CameraFrameAnalyzer(MiDaSDepthModel(), depthPreviewImage!!, performanceText!!)
+            CameraFrameAnalyzer((application as DepthCameraApp).midasDepthModel, depthPreviewImage!!, performanceText!!)
 
         showDepthCheckbox = findViewById(R.id.show_depth)
         showDepthCheckbox!!.isChecked = cameraFrameAnalyzer.showDepth
@@ -95,33 +87,22 @@ class MainActivity : ComponentActivity() {
                     View.INVISIBLE
                 }
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
 
         requestCameraPermission()
         initCamera()
     }
 
+    override fun onResume() {
+        super.onResume()
+
+        if (cameraPreview == null && cameraPermissionGranted())
+            initCamera()
+    }
+
     private fun initCamera() {
         if (cameraPermissionGranted()) {
             cameraPermissionNotice!!.visibility = View.GONE
-            cameraProviderListenableFuture = ProcessCameraProvider.getInstance(this)
-            cameraProviderListenableFuture.addListener(
-                {
-                    try {
-                        val cameraProvider: ProcessCameraProvider =
-                            cameraProviderListenableFuture.get()
-                        bindCameraPreview(cameraProvider)
-                    } catch (e: ExecutionException) {
-                        Log.e(APP_LOG_TAG, e.message!!)
-                    } catch (e: InterruptedException) {
-                        Log.e(APP_LOG_TAG, e.message!!)
-                    }
-                },
-                ContextCompat.getMainExecutor(this)
-            )
+            (application as DepthCameraApp).initCamera(::bindCameraPreview)
         } else {
             cameraPermissionNotice!!.visibility = View.VISIBLE
         }
