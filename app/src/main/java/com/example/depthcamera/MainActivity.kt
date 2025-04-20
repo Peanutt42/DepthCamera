@@ -20,6 +20,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
+import androidx.lifecycle.Lifecycle
 import androidx.camera.camera2.interop.Camera2CameraInfo
 import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.core.CameraInfo
@@ -167,6 +168,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun bindCameraPreview(cameraProvider: ProcessCameraProvider) {
+        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            return
+        }
+
         if (cameraPreview != null) cameraProvider.unbind(cameraPreview)
 
         if (depthAnalysisView != null) cameraProvider.unbind(depthAnalysisView)
