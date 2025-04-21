@@ -52,7 +52,7 @@ class CameraFrameAnalyzer(
                             )
                         }
 
-                        performanceText.setText(performanceInfo.formatted())
+                        performanceText.text = performanceInfo.formatted()
                     }
                 }
             }
@@ -74,6 +74,5 @@ class CameraFrameAnalyzer(
 
     private fun draw(image: Bitmap) {
         depthView.setImageBitmap(image)
-        depthView.scaleType = ImageView.ScaleType.FIT_CENTER
     }
 }

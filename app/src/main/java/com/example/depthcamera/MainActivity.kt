@@ -11,6 +11,7 @@ import android.provider.Settings
 import android.util.Range
 import android.util.Size
 import android.view.View
+import android.view.WindowManager
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.ImageView
@@ -91,6 +92,8 @@ class MainActivity : ComponentActivity() {
 
         requestCameraPermission()
         initCamera()
+
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
     override fun onResume() {
@@ -157,8 +160,6 @@ class MainActivity : ComponentActivity() {
         if (cameraPreview != null) cameraProvider.unbind(cameraPreview)
 
         if (depthAnalysisView != null) cameraProvider.unbind(depthAnalysisView)
-
-        cameraPreviewView!!.scaleType = PreviewView.ScaleType.FILL_END
 
         cameraPreview = Preview.Builder().setTargetFrameRate(Range<Int>(60, 120)).build()
         cameraPreview!!.setSurfaceProvider(cameraPreviewView!!.surfaceProvider)
