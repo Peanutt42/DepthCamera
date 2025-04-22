@@ -3,6 +3,8 @@ package com.example.depthcamera
 import android.app.Application
 import android.content.Context
 import android.util.Log
+import androidx.camera.core.Camera
+import androidx.camera.core.TorchState
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import com.google.common.util.concurrent.ListenableFuture
@@ -11,6 +13,7 @@ import java.util.concurrent.ExecutionException
 class DepthCameraApp : Application() {
 
     lateinit var cameraProviderListenableFuture: ListenableFuture<ProcessCameraProvider>
+    private var camera: Camera? = null
 
     lateinit var depthModel: DepthModel
 
@@ -36,7 +39,7 @@ class DepthCameraApp : Application() {
         depthModel = MiDaSDepthModel()
     }
 
-    fun initCamera(bindCameraPreviewCallback: (cameraProvider: ProcessCameraProvider) -> Unit) {
+    fun initCamera(bindCameraPreviewCallback: (cameraProvider: ProcessCameraProvider) -> Camera?) {
         cameraProviderListenableFuture = ProcessCameraProvider.getInstance(this)
 
         cameraProviderListenableFuture.addListener(
@@ -44,7 +47,10 @@ class DepthCameraApp : Application() {
                 try {
                     val cameraProvider: ProcessCameraProvider =
                         cameraProviderListenableFuture.get()
-                    bindCameraPreviewCallback(cameraProvider)
+                    val newCamera = bindCameraPreviewCallback(cameraProvider)
+                    if (newCamera != null)
+                        camera = newCamera
+
                 } catch (e: ExecutionException) {
                     Log.e(APP_LOG_TAG, e.message!!)
                 } catch (e: InterruptedException) {
@@ -53,5 +59,26 @@ class DepthCameraApp : Application() {
             },
             ContextCompat.getMainExecutor(this)
         )
+    }
+
+    private fun hasCameraFlashlight(): Boolean {
+        return camera?.cameraInfo?.hasFlashUnit() == true
+    }
+
+    fun isCameraFlashlightOn(): Boolean {
+        if (!hasCameraFlashlight())
+            return false
+
+        return camera!!.cameraInfo.torchState.value == TorchState.ON
+    }
+
+    // toggles the camera flashlight and returns whether the flashlight was turned on
+    fun toggleCameraFlashlight(): Boolean {
+        if (!hasCameraFlashlight())
+            return false
+
+        val newFlashlightState = !isCameraFlashlightOn()
+        camera!!.cameraControl.enableTorch(newFlashlightState)
+        return newFlashlightState
     }
 }

@@ -8,7 +8,6 @@ import android.hardware.camera2.CameraCharacteristics
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
-import android.util.Log
 import android.util.Range
 import android.util.Size
 import android.view.View
@@ -25,6 +24,7 @@ import androidx.annotation.OptIn
 import androidx.lifecycle.Lifecycle
 import androidx.camera.camera2.interop.Camera2CameraInfo
 import androidx.camera.camera2.interop.ExperimentalCamera2Interop
+import androidx.camera.core.Camera
 import androidx.camera.core.CameraInfo
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
@@ -36,7 +36,6 @@ import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import java.util.concurrent.Executors
-import kotlin.math.atan
 
 class MainActivity : ComponentActivity() {
     private lateinit var cameraFrameAnalyzer: CameraFrameAnalyzer
@@ -45,6 +44,7 @@ class MainActivity : ComponentActivity() {
     private var cameraPreviewView: PreviewView? = null
     private var cameraPermissionNotice: LinearLayout? = null
     private var allowCameraPermission: Button? = null
+    private var enableFlashlightCheckbox: CheckBox? = null
 
     private var depthPreviewImage: ImageView? = null
     private var depthAnalysisView: ImageAnalysis? = null
@@ -74,6 +74,12 @@ class MainActivity : ComponentActivity() {
         cameraPermissionNotice = findViewById(R.id.camera_permission_notice)
         allowCameraPermission = findViewById(R.id.allow_camera_permission_btn)
         allowCameraPermission!!.setOnClickListener { openCameraPermissionSettings() }
+        enableFlashlightCheckbox = findViewById(R.id.enable_flashlight)
+        enableFlashlightCheckbox!!.isChecked = (application as DepthCameraApp).isCameraFlashlightOn()
+        enableFlashlightCheckbox!!.setOnClickListener {
+            val flashlightOn = (application as DepthCameraApp).toggleCameraFlashlight()
+            enableFlashlightCheckbox!!.isChecked = flashlightOn
+        }
 
         cameraFrameAnalyzer =
             CameraFrameAnalyzer((application as DepthCameraApp).depthModel, depthPreviewImage!!, performanceText!!)
@@ -99,6 +105,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+
+        showDepthCheckbox!!.isChecked = cameraFrameAnalyzer.showDepth
+        enableFlashlightCheckbox!!.isChecked = (application as DepthCameraApp).isCameraFlashlightOn()
 
         if (cameraPreview == null && cameraPermissionGranted())
             initCamera()
@@ -153,9 +162,9 @@ class MainActivity : ComponentActivity() {
                 PackageManager.PERMISSION_GRANTED
     }
 
-    private fun bindCameraPreview(cameraProvider: ProcessCameraProvider) {
+    private fun bindCameraPreview(cameraProvider: ProcessCameraProvider): Camera? {
         if (!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
-            return
+            return null
         }
 
         if (cameraPreview != null) cameraProvider.unbind(cameraPreview)
@@ -173,7 +182,7 @@ class MainActivity : ComponentActivity() {
                 .build()
         depthAnalysisView!!.setAnalyzer(Executors.newCachedThreadPool(), cameraFrameAnalyzer)
 
-        cameraProvider.bindToLifecycle(
+        return cameraProvider.bindToLifecycle(
             (this as LifecycleOwner),
             mostWideCameraSelector(cameraProvider),
             depthAnalysisView,
@@ -198,7 +207,7 @@ private fun mostWideCameraSelector(cameraProvider: ProcessCameraProvider): Camer
                 CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS
             )
 
-        if (focalLengths != null && focalLengths.size >= 1) {
+        if (focalLengths != null && focalLengths.isNotEmpty()) {
             // focalLengths in ascending order: smallest at first
             val focalLength = focalLengths[0]
 
