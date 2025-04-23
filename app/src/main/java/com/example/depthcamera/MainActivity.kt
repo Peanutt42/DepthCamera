@@ -51,8 +51,6 @@ class MainActivity : ComponentActivity() {
 
     private var performanceText: TextView? = null
 
-    private var showDepthCheckbox: CheckBox? = null
-
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             if (isGranted) {
@@ -84,19 +82,6 @@ class MainActivity : ComponentActivity() {
         cameraFrameAnalyzer =
             CameraFrameAnalyzer((application as DepthCameraApp).depthModel, depthPreviewImage!!, performanceText!!)
 
-        showDepthCheckbox = findViewById(R.id.show_depth)
-        showDepthCheckbox!!.isChecked = cameraFrameAnalyzer.showDepth
-        showDepthCheckbox!!.setOnClickListener {
-            cameraFrameAnalyzer.showDepth = !cameraFrameAnalyzer.showDepth
-            showDepthCheckbox!!.isChecked = cameraFrameAnalyzer.showDepth
-            depthPreviewImage!!.visibility =
-                if (cameraFrameAnalyzer.showDepth) {
-                    View.VISIBLE
-                } else {
-                    View.INVISIBLE
-                }
-        }
-
         requestCameraPermission()
         initCamera()
 
@@ -106,7 +91,6 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
 
-        showDepthCheckbox!!.isChecked = cameraFrameAnalyzer.showDepth
         enableFlashlightCheckbox!!.isChecked = (application as DepthCameraApp).isCameraFlashlightOn()
 
         if (cameraPreview == null && cameraPermissionGranted())

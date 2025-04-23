@@ -81,17 +81,6 @@
             android:orientation="vertical" >
 
             <CheckBox
-                android:id="@+id/show_depth"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="0"
-                android:layout_marginVertical="5dp"
-                android:buttonTint="@color/white"
-                android:contentDescription="@string/show_depth_description"
-                android:text="@string/show_depth"
-                android:textColor="@color/white" />
-
-            <CheckBox
                 android:id="@+id/enable_flashlight"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

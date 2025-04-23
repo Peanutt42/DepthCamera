@@ -24,8 +24,6 @@ class CameraFrameAnalyzer(
     private var performanceText: TextView,
 ) : ImageAnalysis.Analyzer {
 
-    var showDepth = true
-
     private var performanceInfo = PerformanceInfo()
 
     private var processingExecutor = Executors.newSingleThreadExecutor()
@@ -43,14 +41,12 @@ class CameraFrameAnalyzer(
                     performanceInfo.newFrame()
 
                     withContext(Dispatchers.Main) {
-                        if (showDepth) {
-                            draw(
-                                depthColorMap(
-                                    predictionResult.output,
-                                    depthModel.getInputSize()
-                                )
+                        draw(
+                            depthColorMap(
+                                predictionResult.output,
+                                depthModel.getInputSize()
                             )
-                        }
+                        )
 
                         performanceText.text = performanceInfo.formatted()
                     }
