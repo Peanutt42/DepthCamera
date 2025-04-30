@@ -57,10 +57,10 @@ dependencies {
     implementation(libs.androidx.camera.extensions)
 
     // Tensorflow Lite
-    implementation(libs.tensorflow.lite)
-    implementation(libs.tensorflow.lite.gpu)
-    implementation(libs.tensorflow.lite.gpu.api)
-    implementation(libs.tensorflow.lite.support)
+    implementation(libs.litert)
+    implementation(libs.litert.gpu)
+    implementation(libs.litert.gpu.api)
+    implementation(libs.litert.support)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

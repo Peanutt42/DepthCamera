@@ -10,6 +10,7 @@ import org.tensorflow.lite.DataType
 import org.tensorflow.lite.Interpreter
 import org.tensorflow.lite.gpu.CompatibilityList
 import org.tensorflow.lite.gpu.GpuDelegate
+import org.tensorflow.lite.gpu.GpuDelegateFactory.Options.INFERENCE_PREFERENCE_SUSTAINED_SPEED
 import org.tensorflow.lite.support.common.FileUtil
 import org.tensorflow.lite.support.common.TensorOperator
 import org.tensorflow.lite.support.common.TensorProcessor
@@ -47,9 +48,12 @@ class MiDaSDepthModel(context: Context) : DepthModel() {
 			Interpreter.Options().apply {
 				val compatibilityList = CompatibilityList()
 				if (compatibilityList.isDelegateSupportedOnThisDevice) {
-					this.addDelegate(GpuDelegate(compatibilityList.bestOptionsForThisDevice))
+					val gpuDelegateOptions = compatibilityList.bestOptionsForThisDevice
+						.setInferencePreference(INFERENCE_PREFERENCE_SUSTAINED_SPEED)
+					this.addDelegate(GpuDelegate(gpuDelegateOptions))
+				} else {
+					this.numThreads = NUM_THREADS
 				}
-				this.numThreads = NUM_THREADS
 			}
 		interpreter =
 			Interpreter(
