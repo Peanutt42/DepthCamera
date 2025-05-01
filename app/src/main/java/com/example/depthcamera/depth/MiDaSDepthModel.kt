@@ -41,22 +41,26 @@ class MiDaSDepthModel(context: Context) : DepthModel() {
 	private val outputTensorProcessor = TensorProcessor.Builder().add(DepthScalingOp()).build()
 
 	init {
+		val loadModelFilePerformanceScope = PerformanceScope("Load $MODEL_NAME")
+		val modelBytes = FileUtil.loadMappedFile(context, MODEL_NAME)
+		loadModelFilePerformanceScope.finish()
+
 		val loadInterpreterPerformanceScope = PerformanceScope("Load TFLite interpreter")
 
 		val interpreterOptions =
 			Interpreter.Options().apply {
 				val compatibilityList = CompatibilityList()
 				if (compatibilityList.isDelegateSupportedOnThisDevice) {
-					this.addDelegate(GpuDelegate(compatibilityList.bestOptionsForThisDevice))
+					val gpuDelegateCacheDirectory = createSerializedGpuDelegateCacheDirectory(context)
+					val modelToken = getModelToken(context, MODEL_NAME)
+					val gpuDelegateOptions = compatibilityList.bestOptionsForThisDevice
+						.setSerializationParams(gpuDelegateCacheDirectory.path, modelToken)
+					this.addDelegate(GpuDelegate(gpuDelegateOptions))
 				} else {
 					this.numThreads = NUM_THREADS
 				}
 			}
-		interpreter =
-			Interpreter(
-				FileUtil.loadMappedFile(context, MODEL_NAME),
-				interpreterOptions
-			)
+		interpreter = Interpreter(modelBytes, interpreterOptions)
 
 		loadInterpreterPerformanceScope.finish()
 	}

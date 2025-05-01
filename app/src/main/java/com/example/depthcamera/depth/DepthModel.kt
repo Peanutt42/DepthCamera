@@ -1,7 +1,11 @@
 package com.example.depthcamera.depth
 
+import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.os.Build
 import android.util.Size
+import java.io.File
 
 data class DepthPredictionResult(var output: FloatArray, var inferenceTimeMillis: Long)
 
@@ -9,4 +13,32 @@ abstract class DepthModel {
 	abstract fun predictDepth(input: Bitmap): DepthPredictionResult
 
 	abstract fun getInputSize(): Size
+}
+
+fun createSerializedGpuDelegateCacheDirectory(context: Context): File {
+	val gpuDelegateCacheDirectory = File(context.cacheDir, "gpu_delegate_cache")
+	if (!gpuDelegateCacheDirectory.exists())
+		gpuDelegateCacheDirectory.mkdirs()
+	return gpuDelegateCacheDirectory
+}
+
+private fun getLastAppUpdateTime(context: Context): Long {
+    try {
+        val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            packageInfo.lastUpdateTime
+        } else {
+            // Fallback
+            File(context.packageCodePath).lastModified()
+        }
+    } catch (e: PackageManager.NameNotFoundException) {
+        e.printStackTrace()
+        return 0L
+    }
+}
+
+// generates a unique token based on the model file name and last install/update time of this app
+fun getModelToken(context: Context, modelFilename: String): String {
+	val lastUpdateTime = getLastAppUpdateTime(context)
+	return "${modelFilename}_${lastUpdateTime}"
 }
