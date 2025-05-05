@@ -10,7 +10,6 @@ import androidx.camera.core.ImageProxy
 import com.example.depthcamera.depth.DepthModel
 import com.example.depthcamera.depth.depthColorMap
 import com.example.depthcamera.performance.PerformanceInfo
-import com.example.depthcamera.performance.PerformanceScope
 import com.example.depthcamera.utils.toBitmap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,8 +26,6 @@ class CameraFrameAnalyzer(
 	private var performanceText: TextView,
 ) : ImageAnalysis.Analyzer {
 
-	private var performanceInfo = PerformanceInfo()
-
 	private var processingExecutor = Executors.newSingleThreadExecutor()
 	private var latestCameraFrame = AtomicReference<Bitmap?>(null)
 
@@ -38,19 +35,18 @@ class CameraFrameAnalyzer(
 				val frame = latestCameraFrame.getAndSet(null)
 
 				if (frame != null) {
-					val predictionResult = depthModel.predictDepth(frame)
-					performanceInfo.inferenceMillis = predictionResult.inferenceTimeMillis
-					performanceInfo.newFrame()
+					val predictionOutput = depthModel.predictDepth(frame)
+					PerformanceInfo.newFrame()
 
 					withContext(Dispatchers.Main) {
 						draw(
 							depthColorMap(
-								predictionResult.output,
+								predictionOutput,
 								depthModel.getInputSize()
 							)
 						)
 
-						performanceText.text = performanceInfo.formatted()
+						performanceText.text = PerformanceInfo.formatted()
 					}
 				}
 			}
@@ -60,12 +56,11 @@ class CameraFrameAnalyzer(
 	@OptIn(ExperimentalGetImage::class)
 	override fun analyze(image: ImageProxy) {
 		if (image.image != null) {
-			var performanceScope = PerformanceScope("acquireCameraImage + Image::toBitmap")
+			PerformanceInfo.measureScope("Camera frame acquire") {
+				latestCameraFrame.set(image.image!!.toBitmap(image.imageInfo.rotationDegrees))
+			}
 
-			latestCameraFrame.set(image.image!!.toBitmap(image.imageInfo.rotationDegrees))
-
-			performanceInfo.cameraFrameAcquiringMillis = performanceScope.finish()
-			performanceInfo.newCameraFrame()
+			PerformanceInfo.newCameraFrame()
 		}
 		image.close()
 	}

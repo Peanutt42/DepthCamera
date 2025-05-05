@@ -3,29 +3,24 @@ package com.example.depthcamera.depth
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.util.Size
-import com.example.depthcamera.performance.PerformanceScope
+import com.example.depthcamera.performance.PerformanceInfo
 
 fun depthColorMap(input: FloatArray, inputImageSize: Size): Bitmap {
-	val performanceScope = PerformanceScope("depthColorMap")
+	return PerformanceInfo.measureScope("Depth colormap") {
+		val depthPixels = IntArray(inputImageSize.width * inputImageSize.height)
 
-	val depthPixels = IntArray(inputImageSize.width * inputImageSize.height)
+		for (i in 0 until input.size) {
+			val depth = input[i].toInt()
+			depthPixels[i] = depthToInfernoColor(depth)
+		}
 
-	for (i in 0 until input.size) {
-		val depth = input[i].toInt()
-		depthPixels[i] = depthToInfernoColor(depth)
-	}
-
-	val bitmap =
-		Bitmap.createBitmap(
+		return@measureScope Bitmap.createBitmap(
 			depthPixels,
 			inputImageSize.width,
 			inputImageSize.height,
 			Bitmap.Config.RGB_565
 		)
-
-	performanceScope.finish()
-
-	return bitmap
+	}
 }
 
 // depth: 0..255

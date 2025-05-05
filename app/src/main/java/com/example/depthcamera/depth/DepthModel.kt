@@ -7,10 +7,9 @@ import android.os.Build
 import android.util.Size
 import java.io.File
 
-data class DepthPredictionResult(var output: FloatArray, var inferenceTimeMillis: Long)
 
 abstract class DepthModel {
-	abstract fun predictDepth(input: Bitmap): DepthPredictionResult
+	abstract fun predictDepth(input: Bitmap): FloatArray
 
 	abstract fun getInputSize(): Size
 }

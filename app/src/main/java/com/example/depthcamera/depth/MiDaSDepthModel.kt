@@ -5,7 +5,7 @@ import android.graphics.Bitmap
 import android.util.Log
 import android.util.Size
 import com.example.depthcamera.DepthCameraApp
-import com.example.depthcamera.performance.PerformanceScope
+import com.example.depthcamera.performance.PerformanceInfo
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.Interpreter
 import org.tensorflow.lite.gpu.CompatibilityList
@@ -41,13 +41,10 @@ class MiDaSDepthModel(context: Context) : DepthModel() {
 	private val outputTensorProcessor = TensorProcessor.Builder().add(DepthScalingOp()).build()
 
 	init {
-		val loadModelFilePerformanceScope = PerformanceScope("Load $MODEL_NAME")
 		val modelBytes = FileUtil.loadMappedFile(context, MODEL_NAME)
-		loadModelFilePerformanceScope.finish()
 
-		val loadInterpreterPerformanceScope = PerformanceScope("Load TFLite interpreter")
-
-		val interpreterOptions =
+		interpreter = PerformanceInfo.measureScope("Load TFLite interpreter") {
+			val interpreterOptions =
 			Interpreter.Options().apply {
 				val compatibilityList = CompatibilityList()
 				if (compatibilityList.isDelegateSupportedOnThisDevice) {
@@ -60,19 +57,14 @@ class MiDaSDepthModel(context: Context) : DepthModel() {
 					this.numThreads = NUM_THREADS
 				}
 			}
-		interpreter = Interpreter(modelBytes, interpreterOptions)
-
-		loadInterpreterPerformanceScope.finish()
+			return@measureScope Interpreter(modelBytes, interpreterOptions)
+		}
 	}
 
-	override fun predictDepth(input: Bitmap): DepthPredictionResult {
+	override fun predictDepth(input: Bitmap): FloatArray {
 		Log.i(DepthCameraApp.APP_LOG_TAG, "Input resolution: ${input.width} X ${input.height}")
 
 		var inputTensor = TensorImage.fromBitmap(input)
-
-		val inferencePerformanceScope = PerformanceScope("Inference")
-
-		inputTensor = inputTensorProcessor.process(inputTensor)
 
 		var outputTensor =
 			TensorBufferFloat.createFixedSize(
@@ -80,13 +72,15 @@ class MiDaSDepthModel(context: Context) : DepthModel() {
 				DataType.FLOAT32
 			)
 
-		interpreter.run(inputTensor.buffer, outputTensor.buffer)
+		PerformanceInfo.measureScope("Inference") {
+			inputTensor = inputTensorProcessor.process(inputTensor)
 
-		outputTensor = outputTensorProcessor.process(outputTensor)
+			interpreter.run(inputTensor.buffer, outputTensor.buffer)
 
-		val inferenceTimeMillis = inferencePerformanceScope.finish()
+			outputTensor = outputTensorProcessor.process(outputTensor)
+		}
 
-		return DepthPredictionResult(outputTensor.floatArray, inferenceTimeMillis)
+		return outputTensor.floatArray
 	}
 
 	override fun getInputSize(): Size {
