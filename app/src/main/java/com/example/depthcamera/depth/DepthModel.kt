@@ -7,10 +7,15 @@ import android.os.Build
 import android.util.Size
 import java.io.File
 
-
+/** Base class that all depth estimation models implement */
 abstract class DepthModel {
+	/**
+	 * @param input is not enforced to match output of [getInputSize], but should be at least a bit larger
+	 * @return relative depth for each pixel between 0.0f and 1.0f
+	 */
 	abstract fun predictDepth(input: Bitmap): FloatArray
 
+	/** @return preferred input image dimensions of the model */
 	abstract fun getInputSize(): Size
 }
 
@@ -22,21 +27,21 @@ fun createSerializedGpuDelegateCacheDirectory(context: Context): File {
 }
 
 private fun getLastAppUpdateTime(context: Context): Long {
-    try {
-        val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            packageInfo.lastUpdateTime
-        } else {
-            // Fallback
-            File(context.packageCodePath).lastModified()
-        }
-    } catch (e: PackageManager.NameNotFoundException) {
-        e.printStackTrace()
-        return 0L
-    }
+	try {
+		val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+		return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+			packageInfo.lastUpdateTime
+		} else {
+			// Fallback
+			File(context.packageCodePath).lastModified()
+		}
+	} catch (e: PackageManager.NameNotFoundException) {
+		e.printStackTrace()
+		return 0L
+	}
 }
 
-// generates a unique token based on the model file name and last install/update time of this app
+/** generates a unique token based on the model file name and last install/update time of this app */
 fun getModelToken(context: Context, modelFilename: String): String {
 	val lastUpdateTime = getLastAppUpdateTime(context)
 	return "${modelFilename}_${lastUpdateTime}"

@@ -5,13 +5,13 @@ import android.graphics.Color
 import android.util.Size
 import com.example.depthcamera.performance.PerformanceInfo
 
-fun depthColorMap(input: FloatArray, inputImageSize: Size): Bitmap {
-	return PerformanceInfo.measureScope("Depth colormap") {
+/** @param input values should be between 0.0f and 1.0f */
+fun depthColorMap(input: FloatArray, inputImageSize: Size): Bitmap =
+	PerformanceInfo.measureScope("Depth colormap") {
 		val depthPixels = IntArray(inputImageSize.width * inputImageSize.height)
 
 		for (i in 0 until input.size) {
-			val depth = input[i].toInt()
-			depthPixels[i] = depthToInfernoColor(depth)
+			depthPixels[i] = depthToInfernoColor(input[i])
 		}
 
 		return@measureScope Bitmap.createBitmap(
@@ -21,16 +21,20 @@ fun depthColorMap(input: FloatArray, inputImageSize: Size): Bitmap {
 			Bitmap.Config.RGB_565
 		)
 	}
+
+/**
+ * @param relativeDepth between 0.0f and 1.0f
+ * @return [Int] (return from Color.rgb(...))
+ */
+fun depthToInfernoColor(relativeDepth: Float): Int {
+	val index = (relativeDepth.coerceAtLeast(0.0f).coerceAtMost(1.0f) * (infernoColors.size - 1)).toInt()
+	return infernoColors[index]
 }
 
-// depth: 0..255
-// returns: Color.rgb(...)
-fun depthToInfernoColor(depth: Int): Int {
-	return infernoColors[depth.coerceAtLeast(0).coerceAtMost(255)]
-}
-
-// Inferno Colormap: index is depth (0..255)
-// https://github.com/kennethmoreland-com/kennethmoreland-com.github.io/blob/master/color-advice/inferno/inferno-table-byte-0256.csv
+/**
+ * Inferno Colormap: index is depth (0..255)
+ * value based on: https://github.com/kennethmoreland-com/kennethmoreland-com.github.io/blob/master/color-advice/inferno/inferno-table-byte-0256.csv
+ */
 private val infernoColors =
 	arrayOf(
 		Color.rgb(0, 0, 4),

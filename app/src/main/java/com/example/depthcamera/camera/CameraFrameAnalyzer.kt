@@ -20,6 +20,9 @@ import kotlinx.coroutines.withContext
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicReference
 
+/**
+ * Helper class that analyses the camera feed images in realtime
+ */
 class CameraFrameAnalyzer(
 	private var depthModel: DepthModel,
 	private var depthView: ImageView,
@@ -36,15 +39,14 @@ class CameraFrameAnalyzer(
 
 				if (frame != null) {
 					val predictionOutput = depthModel.predictDepth(frame)
-					PerformanceInfo.newFrame()
+					PerformanceInfo.newDepthFrame()
 
 					withContext(Dispatchers.Main) {
-						draw(
-							depthColorMap(
-								predictionOutput,
-								depthModel.getInputSize()
-							)
+						val colorMappedImage = depthColorMap(
+							predictionOutput,
+							depthModel.getInputSize()
 						)
+						depthView.setImageBitmap(colorMappedImage)
 
 						performanceText.text = PerformanceInfo.formatted()
 					}
@@ -63,9 +65,5 @@ class CameraFrameAnalyzer(
 			PerformanceInfo.newCameraFrame()
 		}
 		image.close()
-	}
-
-	private fun draw(image: Bitmap) {
-		depthView.setImageBitmap(image)
 	}
 }

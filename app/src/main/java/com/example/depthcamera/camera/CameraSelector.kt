@@ -11,6 +11,9 @@ import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 
+/**
+ * @return Selector that selects the most wide angle sens back camera
+ */
 @OptIn(ExperimentalCamera2Interop::class)
 fun mostWideCameraSelector(cameraProvider: ProcessCameraProvider): CameraSelector {
 	var widestCamera: CameraInfo? = null
@@ -41,6 +44,9 @@ fun mostWideCameraSelector(cameraProvider: ProcessCameraProvider): CameraSelecto
 	return widestCamera?.cameraSelector ?: CameraSelector.DEFAULT_BACK_CAMERA
 }
 
+/**
+ * @return Selector that chooses the smallest possible resolution that still fits the [inputSize]
+ */
 fun performanceResolutionSelector(inputSize: Size): ResolutionSelector {
 	return ResolutionSelector.Builder()
 		.setAllowedResolutionMode(ResolutionSelector.PREFER_CAPTURE_RATE_OVER_HIGHER_RESOLUTION)

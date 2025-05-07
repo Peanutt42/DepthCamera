@@ -18,8 +18,11 @@ import com.google.common.util.concurrent.ListenableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
 
+/**
+ * Helper class that manages opening the camera using Android CameraX API
+ * and hooks the [CameraFrameAnalyzer] up to the camera feed
+ */
 class CameraManager {
-
 	private var cameraProviderListenableFuture: ListenableFuture<ProcessCameraProvider>? = null
 	private var camera: Camera? = null
 	var cameraPreview: Preview? = null

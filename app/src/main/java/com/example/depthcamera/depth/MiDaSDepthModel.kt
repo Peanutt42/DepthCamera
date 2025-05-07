@@ -45,18 +45,19 @@ class MiDaSDepthModel(context: Context) : DepthModel() {
 
 		interpreter = PerformanceInfo.measureScope("Load TFLite interpreter") {
 			val interpreterOptions =
-			Interpreter.Options().apply {
-				val compatibilityList = CompatibilityList()
-				if (compatibilityList.isDelegateSupportedOnThisDevice) {
-					val gpuDelegateCacheDirectory = createSerializedGpuDelegateCacheDirectory(context)
-					val modelToken = getModelToken(context, MODEL_NAME)
-					val gpuDelegateOptions = compatibilityList.bestOptionsForThisDevice
-						.setSerializationParams(gpuDelegateCacheDirectory.path, modelToken)
-					this.addDelegate(GpuDelegate(gpuDelegateOptions))
-				} else {
-					this.numThreads = NUM_THREADS
+				Interpreter.Options().apply {
+					val compatibilityList = CompatibilityList()
+					if (compatibilityList.isDelegateSupportedOnThisDevice) {
+						val gpuDelegateCacheDirectory =
+							createSerializedGpuDelegateCacheDirectory(context)
+						val modelToken = getModelToken(context, MODEL_NAME)
+						val gpuDelegateOptions = compatibilityList.bestOptionsForThisDevice
+							.setSerializationParams(gpuDelegateCacheDirectory.path, modelToken)
+						this.addDelegate(GpuDelegate(gpuDelegateOptions))
+					} else {
+						this.numThreads = NUM_THREADS
+					}
 				}
-			}
 			return@measureScope Interpreter(modelBytes, interpreterOptions)
 		}
 	}
@@ -87,6 +88,7 @@ class MiDaSDepthModel(context: Context) : DepthModel() {
 		return INPUT_IMAGE_SIZE
 	}
 
+	/** scales raw model output to relative 0.0f for min and 1.0f for max output value */
 	class DepthScalingOp : TensorOperator {
 		override fun apply(input: TensorBuffer): TensorBuffer {
 			val values = input.floatArray
@@ -94,11 +96,11 @@ class MiDaSDepthModel(context: Context) : DepthModel() {
 			val min = values.minOrNull()!!
 			if (max - min > Float.MIN_VALUE) {
 				for (i in values.indices) {
-					var p: Int = (((values[i] - min) / (max - min)) * 255).toInt()
+					var p = ((values[i] - min) / (max - min))
 					if (p < 0) {
-						p += 255
+						p += 1.0f
 					}
-					values[i] = p.toFloat()
+					values[i] = p
 				}
 			} else {
 				for (i in values.indices) {

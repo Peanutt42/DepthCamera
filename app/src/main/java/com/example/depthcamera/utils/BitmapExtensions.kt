@@ -10,8 +10,8 @@ import android.media.Image
 import com.example.depthcamera.performance.PerformanceInfo
 import java.io.ByteArrayOutputStream
 
-fun Image.toBitmap(rotationDegrees: Int = 0): Bitmap {
-	return PerformanceInfo.measureScope("Image::toBitmap") {
+fun Image.toBitmap(rotationDegrees: Int = 0): Bitmap =
+	PerformanceInfo.measureScope("Image::toBitmap") {
 		val yBuffer = this.planes[0].buffer
 		val uBuffer = this.planes[1].buffer
 		val vBuffer = this.planes[2].buffer
@@ -27,9 +27,9 @@ fun Image.toBitmap(rotationDegrees: Int = 0): Bitmap {
 		yuvImage.compressToJpeg(Rect(0, 0, yuvImage.width, yuvImage.height), 100, out)
 		val yuv = out.toByteArray()
 
-		return@measureScope BitmapFactory.decodeByteArray(yuv, 0, yuv.size).rotateBitmap(rotationDegrees.toFloat())
+		return@measureScope BitmapFactory.decodeByteArray(yuv, 0, yuv.size)
+			.rotateBitmap(rotationDegrees.toFloat())
 	}
-}
 
 fun Bitmap.rotateBitmap(rotationDegrees: Float = 0.0f): Bitmap {
 	val matrix = Matrix()

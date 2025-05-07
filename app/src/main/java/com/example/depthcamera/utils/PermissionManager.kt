@@ -10,6 +10,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 
+/** Helper class that manages all app permissions, for now only camera permissions */
 class PermissionManager(
 	var activity: ComponentActivity,
 	onCameraPermissionResult: (isGranted: Boolean) -> Unit
