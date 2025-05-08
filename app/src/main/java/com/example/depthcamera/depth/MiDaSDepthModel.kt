@@ -51,6 +51,23 @@ class MiDaSDepthModel(context: Context) : DepthModel() {
 						val gpuDelegateCacheDirectory =
 							createSerializedGpuDelegateCacheDirectory(context)
 						val modelToken = getModelToken(context, MODEL_NAME)
+
+						// cleanup old cached gpu delegate files
+						if (gpuDelegateCacheDirectory.exists()) {
+							for (file in gpuDelegateCacheDirectory.listFiles()!!) {
+								if (!file.name.contains(modelToken)) {
+									try {
+										Log.i(
+											DepthCameraApp.APP_LOG_TAG,
+											"Deleting old gpu delegate cache file: ${file.name}"
+										)
+										file.delete()
+									}
+									catch (_: SecurityException) {}
+								}
+							}
+						}
+
 						val gpuDelegateOptions = compatibilityList.bestOptionsForThisDevice
 							.setSerializationParams(gpuDelegateCacheDirectory.path, modelToken)
 						this.addDelegate(GpuDelegate(gpuDelegateOptions))
