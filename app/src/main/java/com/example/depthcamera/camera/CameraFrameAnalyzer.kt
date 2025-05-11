@@ -38,14 +38,17 @@ class CameraFrameAnalyzer(
 				val frame = latestCameraFrame.getAndSet(null)
 
 				if (frame != null) {
-					val predictionOutput = depthModel.predictDepth(frame)
 					PerformanceInfo.newDepthFrame()
 
+					val predictionOutput = depthModel.predictDepth(frame)
+
 					withContext(Dispatchers.Main) {
-						val colorMappedImage = depthColorMap(
-							predictionOutput,
-							depthModel.getInputSize()
-						)
+						val colorMappedImage = PerformanceInfo.measureDepthScope("Depth colormap") {
+							depthColorMap(
+								predictionOutput,
+								depthModel.getInputSize()
+							)
+						}
 						depthView.setImageBitmap(colorMappedImage)
 
 						performanceText.text = PerformanceInfo.formatted()
@@ -58,11 +61,13 @@ class CameraFrameAnalyzer(
 	@OptIn(ExperimentalGetImage::class)
 	override fun analyze(image: ImageProxy) {
 		if (image.image != null) {
-			PerformanceInfo.measureScope("Camera frame acquire") {
-				latestCameraFrame.set(image.image!!.toBitmap(image.imageInfo.rotationDegrees))
+			PerformanceInfo.newCameraFrame()
+
+			val inputBitmap = PerformanceInfo.measureCameraScope("Convert input to bitmap") {
+				image.image!!.toBitmap(image.imageInfo.rotationDegrees)
 			}
 
-			PerformanceInfo.newCameraFrame()
+			latestCameraFrame.set(inputBitmap)
 		}
 		image.close()
 	}

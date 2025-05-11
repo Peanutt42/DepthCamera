@@ -1,71 +1,81 @@
 package com.example.depthcamera.performance
 
 import android.util.Log
+import com.example.depthcamera.performance.PerformanceInfo.formatted
+import com.example.depthcamera.utils.getCurrentTime
+import kotlin.time.DurationUnit
+
 
 /**
  * Global helper class that collects all performance information
  * [formatted] is used to generate the performance info text overlay
  */
 object PerformanceInfo {
-	const val PERFORMANCE_SCOPE_TAG = "Performance Scope"
+	const val DEPTH_PERFORMANCE_SCOPE_TAG = "Depth Performance"
+	const val CAMERA_PERFORMANCE_SCOPE_TAG = "Camera Performance"
 
-	/** key: scope name, value: time in millis */
-	var latestPerformanceScopes = HashMap<String, Long>()
+	var depthPerformanceFrame = PerformanceFrame("Depth")
+	/** last finished depth performance frame */
+	var lastDepthPerformanceFrame: PerformanceFrame? = null
 
-	var depthFrameMillis = 0L
-	private var lastDepthFrameMillis = System.currentTimeMillis()
+	var cameraPerformanceFrame = PerformanceFrame("Camera")
+	/** last finished camera performance frame */
+	var lastCameraPerformanceFrame: PerformanceFrame? = null
 
-	var lastCameraFrameDurationMillis = 0L
-	private var lastCameraFrameMillis = System.currentTimeMillis()
 
 	fun newDepthFrame() {
-		val now = System.currentTimeMillis()
-		depthFrameMillis = now - lastDepthFrameMillis
-		lastDepthFrameMillis = now
+		lastDepthPerformanceFrame = depthPerformanceFrame.finish()
 	}
 
 	fun newCameraFrame() {
-		val now = System.currentTimeMillis()
-		lastCameraFrameDurationMillis = now - lastCameraFrameMillis
-		lastCameraFrameMillis = now
+		lastCameraPerformanceFrame = cameraPerformanceFrame.finish()
 	}
 
-	/** @sample measureScopeSample */
-	inline fun <T> measureScope(name: String, crossinline fn: () -> T): T {
-		val startMillis = System.currentTimeMillis()
+	/** @sample measureDepthScopeSample */
+	inline fun <T> measureDepthScope(name: String, crossinline fn: () -> T): T {
+		val scopeDepth = depthPerformanceFrame.startScope()
+		val start = getCurrentTime()
 		val result = fn()
-		val durationMillis = System.currentTimeMillis() - startMillis
+		val duration = depthPerformanceFrame.endScope(name, scopeDepth, start)
+		Log.i(
+			DEPTH_PERFORMANCE_SCOPE_TAG,
+			"$name took ${duration.toString(DurationUnit.MILLISECONDS, 2)}"
+		)
+		return result
+	}
 
-		Log.i(PERFORMANCE_SCOPE_TAG, "$name took $durationMillis ms")
-		latestPerformanceScopes[name] = durationMillis
-
+	/** @sample measureCameraScopeSample */
+	inline fun <T> measureCameraScope(name: String, crossinline fn: () -> T): T {
+		val scopeDepth = cameraPerformanceFrame.startScope()
+		val start = getCurrentTime()
+		val result = fn()
+		val duration = cameraPerformanceFrame.endScope(name, scopeDepth, start)
+		Log.i(
+			CAMERA_PERFORMANCE_SCOPE_TAG,
+			"$name took ${duration.toString(DurationUnit.MILLISECONDS, 2)}"
+		)
 		return result
 	}
 
 	fun formatted(): String {
-		val depthFps = 1.0 / (depthFrameMillis * 0.001)
-		val formattedDepthFps = formatDecimal(depthFps)
-		val cameraFps = 1.0 / (lastCameraFrameDurationMillis * 0.001)
-		val formattedCameraFps = formatDecimal(cameraFps)
-		// sorted, so that the slowest scope is at the top
-		val latestPerformanceScopesFormatted =
-			latestPerformanceScopes
-				.map { it.key to it.value }
-				.sortedByDescending { it.second }
-				.joinToString("\n") { "${it.first}: ${it.second} ms" }
-		return "Depth estimations per second: $formattedDepthFps ($depthFrameMillis ms)\n" +
-			"Camera FPS: $formattedCameraFps ($lastCameraFrameDurationMillis ms)\n\n" +
-			latestPerformanceScopesFormatted
+		val depthPerformanceFrameFormatted = lastDepthPerformanceFrame?.formatted()
+		val cameraPerformanceFrameFormatted = lastCameraPerformanceFrame?.formatted()
+
+		return "$depthPerformanceFrameFormatted\n\n$cameraPerformanceFrameFormatted"
 	}
 }
 
-private fun formatDecimal(value: Double): String {
-	return "%.2f".format(value)
+
+@Suppress("UNUSED_FUNCTION")
+private fun measureDepthScopeSample() {
+	PerformanceInfo.measureDepthScope("scope name") {
+		// call any function in this scope to measure its performance
+	}
 }
 
 @Suppress("UNUSED_FUNCTION")
-private fun measureScopeSample() {
-	PerformanceInfo.measureScope("scope name") {
+private fun measureCameraScopeSample() {
+	PerformanceInfo.measureCameraScope("scope name") {
 		// call any function in this scope to measure its performance
 	}
 }

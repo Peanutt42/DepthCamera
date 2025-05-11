@@ -6,21 +6,21 @@ import android.util.Size
 import com.example.depthcamera.performance.PerformanceInfo
 
 /** @param input values should be between 0.0f and 1.0f */
-fun depthColorMap(input: FloatArray, inputImageSize: Size): Bitmap =
-	PerformanceInfo.measureScope("Depth colormap") {
-		val depthPixels = IntArray(inputImageSize.width * inputImageSize.height)
+fun depthColorMap(input: FloatArray, inputImageSize: Size): Bitmap {
+	val depthPixels = IntArray(inputImageSize.width * inputImageSize.height)
 
-		for (i in 0 until input.size) {
-			depthPixels[i] = depthToInfernoColor(input[i])
-		}
-
-		return@measureScope Bitmap.createBitmap(
-			depthPixels,
-			inputImageSize.width,
-			inputImageSize.height,
-			Bitmap.Config.RGB_565
-		)
+	for (i in 0 until input.size) {
+		depthPixels[i] = depthToInfernoColor(input[i])
 	}
+
+	return Bitmap.createBitmap(
+		depthPixels,
+		inputImageSize.width,
+		inputImageSize.height,
+		Bitmap.Config.RGB_565
+	)
+}
+
 
 /**
  * @param relativeDepth between 0.0f and 1.0f
