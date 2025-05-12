@@ -64,7 +64,7 @@ class CameraFrameAnalyzer(
 			PerformanceInfo.newCameraFrame()
 
 			val inputBitmap = PerformanceInfo.measureCameraScope("Convert input to bitmap") {
-				image.image!!.toBitmap(image.imageInfo.rotationDegrees)
+				image.image!!.toBitmap(image.imageInfo.rotationDegrees.toFloat())
 			}
 
 			latestCameraFrame.set(inputBitmap)

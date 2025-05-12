@@ -17,10 +17,10 @@ import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
 import org.tensorflow.lite.support.tensorbuffer.TensorBufferFloat
 
 class MiDaSDepthModel(context: Context) : DepthModel {
-	companion object {
+	private companion object {
 		private const val MODEL_NAME = "lite-model_midas_v2_1_small_1_lite_1.tflite"
-		const val INPUT_IMAGE_DIM = 256
-		val INPUT_IMAGE_SIZE = Size(INPUT_IMAGE_DIM, INPUT_IMAGE_DIM)
+		private const val INPUT_IMAGE_DIM = 256
+		private val INPUT_IMAGE_SIZE = Size(INPUT_IMAGE_DIM, INPUT_IMAGE_DIM)
 		private val NORM_MEAN = floatArrayOf(123.675f, 116.28f, 103.53f)
 		private val NORM_STD = floatArrayOf(58.395f, 57.12f, 57.375f)
 	}

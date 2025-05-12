@@ -54,12 +54,13 @@ class CameraManager {
 
 					cameraPreview =
 						Preview.Builder().setTargetFrameRate(Range<Int>(60, 120)).build()
-					cameraPreview!!.setSurfaceProvider(cameraPreviewView!!.surfaceProvider)
+					cameraPreview!!.surfaceProvider = cameraPreviewView!!.surfaceProvider
 
 					depthAnalysisView =
 						ImageAnalysis.Builder()
 							.setImageQueueDepth(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
 							.setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+							.setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
 							.setResolutionSelector(
 								performanceResolutionSelector(
 									preferredImageSize

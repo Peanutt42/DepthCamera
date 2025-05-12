@@ -13,7 +13,7 @@ class PerformanceScope(
 	val depth: Int,
 ) {
 	fun formatted(): String {
-		return "${paddingTabs(depth)}$name: ${duration.toString(DurationUnit.MILLISECONDS, 2)}"
+		return "${paddingTabs(depth.coerceAtLeast(0))}$name: ${duration.toString(DurationUnit.MILLISECONDS, 2)}"
 	}
 }
 
