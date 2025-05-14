@@ -25,6 +25,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+	        signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
@@ -36,6 +37,11 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+        }
     }
 }
 
@@ -55,12 +61,6 @@ dependencies {
     implementation(libs.androidx.camera.view)
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.extensions)
-
-    // Tensorflow Lite
-    implementation(libs.litert)
-    implementation(libs.litert.gpu)
-    implementation(libs.litert.gpu.api)
-    implementation(libs.litert.support)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

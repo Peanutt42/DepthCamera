@@ -1,8 +1,8 @@
 package com.example.depthcamera.performance
 
 import com.example.depthcamera.utils.getCurrentTime
-import kotlin.time.Duration
 import java.util.Collections
+import kotlin.time.Duration
 import kotlin.time.DurationUnit
 
 class PerformanceScope(
@@ -13,7 +13,12 @@ class PerformanceScope(
 	val depth: Int,
 ) {
 	fun formatted(): String {
-		return "${paddingTabs(depth.coerceAtLeast(0))}$name: ${duration.toString(DurationUnit.MILLISECONDS, 2)}"
+		return "${paddingTabs(depth.coerceAtLeast(0))}$name: ${
+			duration.toString(
+				DurationUnit.MILLISECONDS,
+				2
+			)
+		}"
 	}
 }
 
@@ -74,7 +79,12 @@ class PerformanceFrame(
 		val end = (end ?: getCurrentTime())
 		val duration = end - start
 		val fps = 1.0 / duration.toDouble(DurationUnit.SECONDS)
-		return "$name Frame: ${"%.2f".format(fps)} fps (${duration.toString(DurationUnit.MILLISECONDS, 2)})\n$formattedScopes"
+		return "$name Frame: ${"%.2f".format(fps)} fps (${
+			duration.toString(
+				DurationUnit.MILLISECONDS,
+				2
+			)
+		})\n$formattedScopes"
 	}
 }
 

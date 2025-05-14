@@ -7,10 +7,9 @@ import androidx.annotation.OptIn
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
+import com.example.depthcamera.NativeLib
 import com.example.depthcamera.depth.DepthModel
-import com.example.depthcamera.depth.depthColorMap
 import com.example.depthcamera.performance.PerformanceInfo
-import com.example.depthcamera.utils.toBitmap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -44,7 +43,7 @@ class CameraFrameAnalyzer(
 
 					withContext(Dispatchers.Main) {
 						val colorMappedImage = PerformanceInfo.measureDepthScope("Depth colormap") {
-							depthColorMap(
+							NativeLib.depthColorMap(
 								predictionOutput,
 								depthModel.getInputSize()
 							)
@@ -64,7 +63,7 @@ class CameraFrameAnalyzer(
 			PerformanceInfo.newCameraFrame()
 
 			val inputBitmap = PerformanceInfo.measureCameraScope("Convert input to bitmap") {
-				image.image!!.toBitmap(image.imageInfo.rotationDegrees.toFloat())
+				NativeLib.imageToBitmap(image.image!!, image.imageInfo.rotationDegrees.toFloat())
 			}
 
 			latestCameraFrame.set(inputBitmap)

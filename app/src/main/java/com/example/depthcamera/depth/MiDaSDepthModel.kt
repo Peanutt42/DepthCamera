@@ -4,17 +4,9 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import android.util.Size
+import androidx.core.graphics.scale
 import com.example.depthcamera.DepthCameraApp
-import com.example.depthcamera.performance.PerformanceInfo
-import org.tensorflow.lite.DataType
-import org.tensorflow.lite.Interpreter
-import org.tensorflow.lite.support.common.FileUtil
-import org.tensorflow.lite.support.common.TensorProcessor
-import org.tensorflow.lite.support.image.ImageProcessor
-import org.tensorflow.lite.support.image.TensorImage
-import org.tensorflow.lite.support.image.ops.ResizeOp
-import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
-import org.tensorflow.lite.support.tensorbuffer.TensorBufferFloat
+import com.example.depthcamera.NativeLib
 
 class MiDaSDepthModel(context: Context) : DepthModel {
 	private companion object {
@@ -25,24 +17,34 @@ class MiDaSDepthModel(context: Context) : DepthModel {
 		private val NORM_STD = floatArrayOf(58.395f, 57.12f, 57.375f)
 	}
 
-	private var interpreter: Interpreter
-
-	private val inputTensorProcessor =
-		ImageProcessor.Builder()
-			.add(ResizeOpWrapper(INPUT_IMAGE_DIM, INPUT_IMAGE_DIM, ResizeOp.ResizeMethod.BILINEAR))
-			.add(NormalizeOpWrapper(NORM_MEAN, NORM_STD))
-			.build()
-
-	private val outputTensorProcessor = TensorProcessor.Builder()
-		.add(MinMaxScalingOp())
-		.build()
-
 	init {
-		val modelBytes = FileUtil.loadMappedFile(context, MODEL_NAME)
+		val modelData = context.assets.openFd(MODEL_NAME).createInputStream().readBytes()
 
-		interpreter = PerformanceInfo.measureDepthScope("Load TFLite interpreter") {
-			createTFLiteInterpreter(context, modelBytes, MODEL_NAME)
+		val gpuDelegateCacheDirectory =
+			createSerializedGpuDelegateCacheDirectory(context)
+		val modelToken = getModelToken(context, MODEL_NAME)
+
+		// cleanup old cached gpu delegate files
+		if (gpuDelegateCacheDirectory.exists()) {
+			for (file in gpuDelegateCacheDirectory.listFiles()!!) {
+				if (!file.name.contains(modelToken)) {
+					try {
+						Log.i(
+							DepthCameraApp.APP_LOG_TAG,
+							"Deleting old gpu delegate cache file: ${file.name}"
+						)
+						file.delete()
+					} catch (_: SecurityException) {
+					}
+				}
+			}
 		}
+
+		NativeLib.initDepthTfLiteRuntime(
+			modelData,
+			gpuDelegateCacheDirectory.path,
+			modelToken
+		)
 	}
 
 	override fun getInputSize(): Size = INPUT_IMAGE_SIZE
@@ -50,26 +52,20 @@ class MiDaSDepthModel(context: Context) : DepthModel {
 	override fun predictDepth(input: Bitmap): FloatArray {
 		Log.i(DepthCameraApp.APP_LOG_TAG, "Input resolution: ${input.width} X ${input.height}")
 
-		lateinit var inputTensor: TensorImage
-		lateinit var outputTensor: TensorBuffer
-		PerformanceInfo.measureDepthScope("Loading input") {
-			inputTensor = TensorImage.fromBitmap(input)
-			outputTensor = TensorBufferFloat.createFixedSize(
-				intArrayOf(INPUT_IMAGE_DIM, INPUT_IMAGE_DIM, 1),
-				DataType.FLOAT32
-			)
-		}
+		val scaled = input.scale(INPUT_IMAGE_DIM, INPUT_IMAGE_DIM)
+		val input = NativeLib.bitmapToFloatArray(scaled)
+		var output = FloatArray(INPUT_IMAGE_DIM * INPUT_IMAGE_DIM)
 
-		PerformanceInfo.measureDepthScope("Inference") {
-			inputTensor = inputTensorProcessor.process(inputTensor)
-
-			interpreter.run(inputTensor.buffer, outputTensor.buffer)
-		}
-
-		val output = PerformanceInfo.measureDepthScope("Postprocessing") {
-			outputTensor = outputTensorProcessor.process(outputTensor)
-			outputTensor.floatArray
-		}
+		NativeLib.runDepthInference(
+			input,
+			output,
+			NORM_MEAN[0],
+			NORM_MEAN[1],
+			NORM_MEAN[2],
+			NORM_STD[0],
+			NORM_STD[1],
+			NORM_STD[2]
+		)
 
 		return output
 	}

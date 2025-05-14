@@ -15,10 +15,12 @@ object PerformanceInfo {
 	const val CAMERA_PERFORMANCE_SCOPE_TAG = "Camera Performance"
 
 	var depthPerformanceFrame = PerformanceFrame("Depth")
+
 	/** last finished depth performance frame */
 	var lastDepthPerformanceFrame: PerformanceFrame? = null
 
 	var cameraPerformanceFrame = PerformanceFrame("Camera")
+
 	/** last finished camera performance frame */
 	var lastCameraPerformanceFrame: PerformanceFrame? = null
 
