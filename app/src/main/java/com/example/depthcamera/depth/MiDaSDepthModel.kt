@@ -47,6 +47,10 @@ class MiDaSDepthModel(context: Context) : DepthModel {
 		)
 	}
 
+	override fun close() {
+		NativeLib.shutdownDepthTfLiteRuntime()
+	}
+
 	override fun getInputSize(): Size = INPUT_IMAGE_SIZE
 
 	override fun predictDepth(input: Bitmap): FloatArray {

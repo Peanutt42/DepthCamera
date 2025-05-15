@@ -19,7 +19,6 @@ object NativeLib {
 		modelToken: String
 	)
 
-	// TODO: actually call at shutdown
 	external fun shutdownDepthTfLiteRuntime()
 
 	external fun runDepthInference(

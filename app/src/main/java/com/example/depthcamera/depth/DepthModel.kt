@@ -8,7 +8,7 @@ import android.util.Size
 import java.io.File
 
 /** Base class that all depth estimation models implement */
-interface DepthModel {
+interface DepthModel : AutoCloseable {
 	/**
 	 * @param input is not enforced to match output of [getInputSize], but should be at least a bit larger
 	 * @return relative depth for each pixel between 0.0f and 1.0f
