@@ -43,6 +43,10 @@ android {
             path = file("src/main/cpp/CMakeLists.txt")
         }
     }
+    androidResources {
+        noCompress.add("tflite")
+        noCompress.add("onnx")
+    }
 }
 
 dependencies {

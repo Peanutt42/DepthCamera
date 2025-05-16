@@ -22,7 +22,7 @@ void check_android_bitmap_result(int result) {
 	}
 }
 
-void bitmap_to_rgb_float_array(
+void bitmap_to_rgb_hwc_255_float_array(
 	JNIEnv* env,
 	jobject bitmap,
 	std::span<float> out_float_array
@@ -53,9 +53,54 @@ void bitmap_to_rgb_float_array(
 	size_t j = 0;
 	for (; i < info.width * info.height; i++) {
 		int pixel_color = pixelPtr[i];
-		out_float_array[j++] = (float)(pixel_color >> 16 & 255);
-		out_float_array[j++] = (float)(pixel_color >> 8 & 255);
-		out_float_array[j++] = (float)(pixel_color & 255);
+		out_float_array[j++] = (float)red_channel_from_argb_color(pixel_color);
+		out_float_array[j++] =
+			(float)green_channel_from_argb_color(pixel_color);
+		out_float_array[j++] = (float)blue_channel_from_argb_color(pixel_color);
+	}
+
+	check_android_bitmap_result(AndroidBitmap_unlockPixels(env, bitmap));
+}
+
+void bitmap_to_rgb_chw_float_array(
+	JNIEnv* env,
+	jobject bitmap,
+	std::span<float> out_float_array
+) {
+	PROFILE_FUNCTION()
+
+	AndroidBitmapInfo info;
+	check_android_bitmap_result(AndroidBitmap_getInfo(env, bitmap, &info));
+
+	if (info.format != ANDROID_BITMAP_FORMAT_RGBA_8888) {
+		LOG_ERROR("Bitmap format is not RGBA 8888!");
+		return;
+	}
+
+	if (out_float_array.size() < info.width * info.height * 3) {
+		LOG_ERROR("out_float_array is too small for this bitmap!");
+		return;
+	}
+
+	void* addressPtr = nullptr;
+	check_android_bitmap_result(
+		AndroidBitmap_lockPixels(env, bitmap, &addressPtr)
+	);
+	// RGBA 8888 -> one int for each pixel
+	int* pixelPtr = (int*)addressPtr;
+
+	const size_t red_channel_offset = 0;
+	const size_t green_channel_offset = info.width * info.height;
+	const size_t blue_channel_offset = 2 * info.width * info.height;
+
+	for (size_t i = 0; i < info.width * info.height; i++) {
+		int pixel_color = pixelPtr[i];
+		out_float_array[red_channel_offset + i] =
+			(float)red_channel_from_argb_color(pixel_color) / 255.f;
+		out_float_array[green_channel_offset + i] =
+			(float)green_channel_from_argb_color(pixel_color) / 255.f;
+		out_float_array[blue_channel_offset + i] =
+			(float)blue_channel_from_argb_color(pixel_color) / 255.f;
 	}
 
 	check_android_bitmap_result(AndroidBitmap_unlockPixels(env, bitmap));

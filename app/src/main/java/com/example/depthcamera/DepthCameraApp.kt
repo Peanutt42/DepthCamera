@@ -3,6 +3,7 @@ package com.example.depthcamera
 import android.app.Application
 import com.example.depthcamera.camera.CameraManager
 import com.example.depthcamera.depth.DepthModel
+import com.example.depthcamera.depth.DepthAnythingModel
 import com.example.depthcamera.depth.MiDaSDepthModel
 
 /**
@@ -20,6 +21,6 @@ class DepthCameraApp : Application() {
 	override fun onCreate() {
 		super.onCreate()
 
-		depthModel = MiDaSDepthModel(this)
+		depthModel = MiDaSDepthModel(this)//DepthAnythingModel(this)
 	}
 }

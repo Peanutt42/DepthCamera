@@ -1,5 +1,6 @@
 #pragma once
 
+#include "OnnxRuntime.hpp"
 #include "TfLiteRuntime.hpp"
 #include <span>
 
@@ -9,6 +10,14 @@ void run_depth_estimation(
 	TfLiteRuntime& tflite_runtime,
 	std::span<float> input,
 	std::span<float> output,
+	std::array<float, RGB_CHANNELS> mean,
+	std::array<float, RGB_CHANNELS> stddev
+);
+
+void run_depth_estimation(
+	OnnxRuntime& onnx_runtime,
+	std::span<float> input_data,
+	std::span<float> output_data,
 	std::array<float, RGB_CHANNELS> mean,
 	std::array<float, RGB_CHANNELS> stddev
 );

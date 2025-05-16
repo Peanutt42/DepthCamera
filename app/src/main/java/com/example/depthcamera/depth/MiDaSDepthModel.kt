@@ -10,7 +10,7 @@ import com.example.depthcamera.NativeLib
 
 class MiDaSDepthModel(context: Context) : DepthModel {
 	private companion object {
-		private const val MODEL_NAME = "lite-model_midas_v2_1_small_1_lite_1.tflite"
+		private const val MODEL_NAME = "midas_v2_1_256x256.tflite"
 		private const val INPUT_IMAGE_DIM = 256
 		private val INPUT_IMAGE_SIZE = Size(INPUT_IMAGE_DIM, INPUT_IMAGE_DIM)
 		private val NORM_MEAN = floatArrayOf(123.675f, 116.28f, 103.53f)
@@ -18,7 +18,7 @@ class MiDaSDepthModel(context: Context) : DepthModel {
 	}
 
 	init {
-		val modelData = context.assets.openFd(MODEL_NAME).createInputStream().readBytes()
+		val modelData = context.assets.open(MODEL_NAME).readBytes()
 
 		val gpuDelegateCacheDirectory =
 			createSerializedGpuDelegateCacheDirectory(context)
@@ -57,10 +57,10 @@ class MiDaSDepthModel(context: Context) : DepthModel {
 		Log.i(DepthCameraApp.APP_LOG_TAG, "Input resolution: ${input.width} X ${input.height}")
 
 		val scaled = input.scale(INPUT_IMAGE_DIM, INPUT_IMAGE_DIM)
-		val input = NativeLib.bitmapToFloatArray(scaled)
+		val input = NativeLib.bitmapToRgbHwc255FloatArray(scaled)
 		var output = FloatArray(INPUT_IMAGE_DIM * INPUT_IMAGE_DIM)
 
-		NativeLib.runDepthInference(
+		NativeLib.runDepthTfLiteInference(
 			input,
 			output,
 			NORM_MEAN[0],

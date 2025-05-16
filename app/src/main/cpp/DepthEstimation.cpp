@@ -18,6 +18,22 @@ void run_depth_estimation(
 	min_max_scaling(output);
 }
 
+void run_depth_estimation(
+	OnnxRuntime& onnx_runtime,
+	std::span<float> input_data,
+	std::span<float> output_data,
+	std::array<float, RGB_CHANNELS> mean,
+	std::array<float, RGB_CHANNELS> stddev
+) {
+	PROFILE_FUNCTION()
+
+	normalize_rgb(input_data, mean, stddev);
+
+	onnx_runtime.run_inference<float, float>(input_data, output_data);
+
+	min_max_scaling(output_data);
+}
+
 void normalize_rgb(
 	std::span<float> values,
 	std::array<float, RGB_CHANNELS> mean,
@@ -39,13 +55,9 @@ void min_max_scaling(std::span<float> values) {
 	if (values.empty())
 		return;
 
-	float min = values[0];
-	float max = values[0];
-
-	for (size_t i = 1; i < values.size(); i++) {
-		min = std::fmin(min, values[i]);
-		max = std::fmax(max, values[i]);
-	}
+	const auto [min_iter, max_iter] =
+		std::minmax_element(values.begin(), values.end());
+	float min = *min_iter, max = *max_iter;
 
 	float diff = max - min;
 
@@ -220,6 +232,6 @@ constexpr int INFERNO_COLORS[INFERNO_COLOR_COUNT] = {
 
 int inferno_depth_colormap(float relative_depth) {
 	relative_depth = std::clamp(relative_depth, 0.0f, 1.0f);
-	size_t index = (size_t)(relative_depth * (INFERNO_COLOR_COUNT - 1));
+	auto index = (size_t)(relative_depth * (INFERNO_COLOR_COUNT - 1));
 	return INFERNO_COLORS[index];
 }

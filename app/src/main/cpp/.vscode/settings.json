@@ -7,6 +7,6 @@
 		"ANDROID_STL": "c++_shared",
 		"ANDROID_TOOLCHAIN_NAME": "aarch64-linux-android",
 		"CMAKE_SYSTEM_NAME": "Android",
-		"CMAKE_SYSROOT": "${env:ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/",
+		"CMAKE_SYSROOT": "${env:ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/"
 	}
   }

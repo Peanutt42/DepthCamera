@@ -1,27 +1,14 @@
 #include "TfLiteRuntime.hpp"
 #include "PerformanceScope.hpp"
 
-#include "tflite/delegates/gpu/delegate.h"
+#include "tflite/c/common.h"
+#include <cassert>
 
-void tflite_error_callback(void* user_data, const char* format, va_list args) {
-	va_list args_copy;
-	va_copy(args_copy, args);
-
-	int formatted_error_msg_length =
-		std::vsnprintf(nullptr, 0, format, args_copy);
-	std::vector<char> formatted_error_msg_buffer;
-	formatted_error_msg_buffer.resize(formatted_error_msg_length + 1);
-	std::vsnprintf(
-		formatted_error_msg_buffer.data(), formatted_error_msg_buffer.size(),
-		format, args
-	);
-	std::string formatted_error_msg(formatted_error_msg_buffer.data());
-
-	LOG_ERROR(
-		"[TFLITE ERROR CALLBACK] {} (user_data: {})",
-		formatted_error_msg.c_str(), user_data
-	);
-}
+void tflite_error_callback(
+	void* /*user_data*/,
+	const char* format,
+	va_list args
+);
 
 TfLiteRuntime::TfLiteRuntime(
 	std::span<const int8_t> model_data,
@@ -44,7 +31,7 @@ TfLiteRuntime::TfLiteRuntime(
 
 	interpreter = TfLiteInterpreterCreate(model, interpreter_options);
 
-	TfLiteInterpreterAllocateTensors(interpreter);
+	CHECK_TFLITE_STATUS(TfLiteInterpreterAllocateTensors, interpreter);
 }
 
 TfLiteRuntime::~TfLiteRuntime() {
@@ -57,89 +44,65 @@ TfLiteRuntime::~TfLiteRuntime() {
 	TfLiteModelDelete(model);
 }
 
-void TfLiteRuntime::_run_inference(
-	const void* input,
-	size_t input_data_size,
-	void* output,
-	size_t output_data_size
+void TfLiteRuntime::_load_nonquantized_input(
+	std::span<const std::byte> input_bytes,
+	TfLiteTensor* input_tensor,
+	TfLiteType input_type
 ) {
-	PROFILE_SCOPE("Total Inference")
+	PROFILE_FUNCTION()
 
-	{
-		PROFILE_SCOPE("Loading Input")
-
-		TfLiteTensor* input_tensor =
-			TfLiteInterpreterGetInputTensor(interpreter, 0);
-		check_tflite_status(
-			TfLiteTensorCopyFromBuffer(input_tensor, input, input_data_size)
+	if (input_tensor->type != input_type) {
+		LOG_ERROR(
+			"input type is {} but model requires the input to be {}",
+			format_tflite_type(input_type),
+			format_tflite_type(input_tensor->type)
 		);
-	}
-
-	{
-		PROFILE_SCOPE("Invoking of model")
-
-		check_tflite_status(TfLiteInterpreterInvoke(interpreter));
-	}
-
-	{
-		PROFILE_SCOPE("Reading output")
-
-		const TfLiteTensor* output_tensor =
-			TfLiteInterpreterGetOutputTensor(interpreter, 0);
-		check_tflite_status(
-			TfLiteTensorCopyToBuffer(output_tensor, output, output_data_size)
-		);
-	}
-}
-
-TfLiteDelegate* TfLiteRuntime::create_gpu_delegate(
-	std::string_view gpu_delegate_serialization_dir,
-	std::string_view model_token
-) {
-	TfLiteGpuDelegateOptionsV2 gpu_delegate_options =
-		TfLiteGpuDelegateOptionsV2Default();
-	gpu_delegate_options.is_precision_loss_allowed = true;
-	gpu_delegate_options.inference_preference =
-		TFLITE_GPU_INFERENCE_PREFERENCE_FAST_SINGLE_ANSWER;
-	gpu_delegate_options.experimental_flags |= TfLiteGpuExperimentalFlags::
-		TFLITE_GPU_EXPERIMENTAL_FLAGS_ENABLE_SERIALIZATION;
-	gpu_delegate_options.serialization_dir =
-		gpu_delegate_serialization_dir.data();
-	gpu_delegate_options.model_token = model_token.data();
-
-	return TfLiteGpuDelegateV2Create(&gpu_delegate_options);
-}
-
-void TfLiteRuntime::check_tflite_status(TfLiteStatus status) {
-	if (status == kTfLiteOk)
 		return;
+	}
 
-	LOG_ERROR("TfLite function returned {}", format_tflite_status(status));
+	CHECK_TFLITE_STATUS(
+		TfLiteTensorCopyFromBuffer, input_tensor, input_bytes.data(),
+		input_bytes.size_bytes()
+	);
 }
 
-std::string_view TfLiteRuntime::format_tflite_status(TfLiteStatus status) {
-	switch (status) {
-	case kTfLiteOk:
-		return "ok";
-	case kTfLiteError:
-		return "general error";
-	case kTfLiteDelegateError:
-		return "delegate error";
-	case kTfLiteApplicationError:
-		return "application error";
-	case kTfLiteDelegateDataNotFound:
-		return "delegate data not found";
-	case kTfLiteDelegateDataWriteError:
-		return "delegate data write error";
-	case kTfLiteDelegateDataReadError:
-		return "delegate data read error";
-	case kTfLiteUnresolvedOps:
-		return "unresolved Ops";
-	case kTfLiteCancelled:
-		return "canceled";
-	case kTfLiteOutputShapeNotKnown:
-		return "output shape not known";
-	default:
-		return "unknown";
+void TfLiteRuntime::_read_nonquantized_output(
+	std::span<std::byte> output_bytes,
+	const TfLiteTensor* output_tensor,
+	TfLiteType output_type
+) {
+	if (output_tensor->type != output_type) {
+		LOG_ERROR(
+			"output type is {} but model requires the output to be {}",
+			format_tflite_type(output_type),
+			format_tflite_type(output_tensor->type)
+		);
+		return;
 	}
+
+	CHECK_TFLITE_STATUS(
+		TfLiteTensorCopyToBuffer, output_tensor, output_bytes.data(),
+		output_bytes.size_bytes()
+	);
+}
+
+void tflite_error_callback(
+	void* /*user_data*/,
+	const char* format,
+	va_list args
+) {
+	va_list args_copy;
+	va_copy(args_copy, args);
+
+	int formatted_error_msg_length =
+		std::vsnprintf(nullptr, 0, format, args_copy);
+	std::vector<char> formatted_error_msg_buffer;
+	formatted_error_msg_buffer.resize(formatted_error_msg_length + 1);
+	std::vsnprintf(
+		formatted_error_msg_buffer.data(), formatted_error_msg_buffer.size(),
+		format, args
+	);
+	std::string formatted_error_msg(formatted_error_msg_buffer.data());
+
+	LOG_ERROR("[TFLITE ERROR CALLBACK] {}", formatted_error_msg.c_str());
 }

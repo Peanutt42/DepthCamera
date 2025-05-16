@@ -13,11 +13,31 @@ constexpr inline int color_rgb(int r, int g, int b) {
 	return color_argb(255, r, g, b);
 }
 
+constexpr inline int red_channel_from_argb_color(int color) {
+	return (color >> 16) & 255;
+}
+constexpr inline int green_channel_from_argb_color(int color) {
+	return (color >> 8) & 255;
+}
+constexpr inline int blue_channel_from_argb_color(int color) {
+	return color & 255;
+}
+
 void check_android_bitmap_result(int result);
 
-/// writes the 3 rgb channel components into the float array, each rgb float
-/// channel is between 0.0f and 255.0f
-void bitmap_to_rgb_float_array(
+/// converts pixel from bitmap into float array with (height, width, channel)
+/// shape and 3 rgb-channels each in the range of 0.0f to 255.0f
+/// often the right format for use with tflite models
+void bitmap_to_rgb_hwc_255_float_array(
+	JNIEnv* env,
+	jobject bitmap,
+	std::span<float> out_float_array
+);
+
+/// converts pixel from bitmap into float array with (channel, height, width)
+/// shape and 3 rgb-channels each in the range of 0.0f to 1.0f
+/// often the right format for use with onnx models
+void bitmap_to_rgb_chw_float_array(
 	JNIEnv* env,
 	jobject bitmap,
 	std::span<float> out_float_array

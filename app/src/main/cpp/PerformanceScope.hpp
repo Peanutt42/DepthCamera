@@ -2,24 +2,25 @@
 
 #include "Log.hpp"
 #include <chrono>
+#include <string_view>
 
 struct PerformanceScope {
-	explicit PerformanceScope(const char* name)
-		: name(name), start(std::chrono::high_resolution_clock::now()) {}
+	using clock = std::chrono::high_resolution_clock;
+
+	explicit PerformanceScope(std::string_view name)
+		: name(name), start(clock::now()) {}
 
 	~PerformanceScope() {
-		auto duration = std::chrono::high_resolution_clock::now() - start;
-		LOG_INFO(
-			"{} took {} ms", name,
-			std::chrono::duration_cast<std::chrono::microseconds>(duration)
-					.count() /
-				1000.0f
+		auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
+			clock::now() - start
 		);
+		float duration_millis = (float)duration.count() / 1000.0f;
+		LOG_INFO("{} took {} ms", name, duration_millis);
 	}
 
   private:
-	const char* name;
-	std::chrono::high_resolution_clock::time_point start;
+	std::string_view name;
+	clock::time_point start;
 };
 
 #define COMBINE(x, y) x##y
