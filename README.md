@@ -1,10 +1,12 @@
 # DepthCamera
- Android app running MiDaS depth estimation model
+ Android app running MiDaS and DepthAnything depth estimation models
 
+## Demo (old)
 https://github.com/user-attachments/assets/19394a55-3e10-4b0d-a7e5-96c03b27d440
 
+## Features
+- TfLite model support: midas
+- Quantization support (for now, only for tflite models)
+- Onnx model support: Depth Anything (v2)
 
-### MiDaS: v2.1
-Model: https://www.kaggle.com/models/intel/midas/tfLite/v2-1-small-lite/1?tfhub-redirect=true
-
-Repo: https://github.com/isl-org/MiDaS
+see [README.md](app/src/main/assets/README.md) for complete list of depth estimation models
