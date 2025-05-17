@@ -3,11 +3,12 @@
 #include <memory>
 
 #include "DepthEstimation.hpp"
-#include "ImageUtils.hpp"
-#include "Log.hpp"
-#include "NativeJavaScopes.hpp"
-#include "OnnxRuntime.hpp"
-#include "TfLiteRuntime.hpp"
+#include "onnx/OnnxRuntime.hpp"
+#include "tflite/TfLiteRuntime.hpp"
+#include "utils/ImageUtils.hpp"
+#include "utils/Log.hpp"
+#include "utils/NativeJavaScopes.hpp"
+#include "utils/Profiling.hpp"
 
 static std::unique_ptr<TfLiteRuntime> depth_estimation_tflite_runtime = nullptr;
 
@@ -184,5 +185,38 @@ Java_com_example_depthcamera_NativeLib_imageBytesToArgbIntArray(
 
 	image_bytes_to_argb_int_array(
 		image_byte_array.as_span(), out_int_array_scope.as_span()
+	);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_example_depthcamera_NativeLib_newDepthFrame(
+	JNIEnv* /*env*/,
+	jobject /*this*/
+) {
+	get_last_depth_profiling_frame_formatted() =
+		get_depth_profiling_frame().finish();
+}
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_example_depthcamera_NativeLib_formatDepthFrame(
+	JNIEnv* env,
+	jobject /*this*/
+) {
+	return env->NewStringUTF(get_last_depth_profiling_frame_formatted().c_str()
+	);
+}
+extern "C" JNIEXPORT void JNICALL
+Java_com_example_depthcamera_NativeLib_newCameraFrame(
+	JNIEnv* /*env*/,
+	jobject /*this*/
+) {
+	get_last_camera_profiling_frame_formatted() =
+		get_camera_profiling_frame().finish();
+}
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_example_depthcamera_NativeLib_formatCameraFrame(
+	JNIEnv* env,
+	jobject /*this*/
+) {
+	return env->NewStringUTF(get_last_camera_profiling_frame_formatted().c_str()
 	);
 }

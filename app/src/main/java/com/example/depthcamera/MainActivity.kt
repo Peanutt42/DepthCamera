@@ -12,7 +12,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.camera.view.PreviewView
 import com.example.depthcamera.camera.CameraFrameAnalyzer
-import com.example.depthcamera.utils.PermissionManager
 
 class MainActivity : ComponentActivity() {
 	private var permissionManager = PermissionManager(this, ::onCameraPermissionResult)

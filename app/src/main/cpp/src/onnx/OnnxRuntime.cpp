@@ -1,5 +1,6 @@
 #include "OnnxRuntime.hpp"
-#include "PerformanceScope.hpp"
+#include "utils/Log.hpp"
+#include "utils/Profiling.hpp"
 #include "onnxruntime_c_api.h"
 #include "onnxruntime_cxx_api.h"
 
@@ -34,7 +35,7 @@ void onnx_logging_callback(
 OnnxRuntime::OnnxRuntime(std::span<const std::byte> model_data)
 	: env(nullptr), session(nullptr), memory_info(nullptr) {
 
-	PROFILE_SCOPE("Init OnnxRuntime")
+	PROFILE_DEPTH_SCOPE("Init OnnxRuntime")
 
 	env = Ort::Env(
 		ORT_LOGGING_LEVEL_WARNING, "Default", onnx_logging_callback, nullptr
@@ -88,13 +89,13 @@ void OnnxRuntime::_run_inference(
 	std::span<std::byte> input_data,
 	std::span<std::byte> output_data
 ) {
-	PROFILE_SCOPE("Run Inference")
+	PROFILE_DEPTH_SCOPE("Run Inference")
 
 	Ort::Value input_tensor;
 	Ort::Value output_tensor;
 
 	{
-		PROFILE_SCOPE("Preparing Inference")
+		PROFILE_DEPTH_SCOPE("Preparing Inference")
 
 		input_tensor = Ort::Value::CreateTensor(
 			memory_info, input_data.data(), input_data.size_bytes(),
@@ -107,7 +108,7 @@ void OnnxRuntime::_run_inference(
 	}
 
 	{
-		PROFILE_SCOPE("Invoking model")
+		PROFILE_DEPTH_SCOPE("Invoking model")
 
 		const char* input_names{input_name.data()};
 		const char* output_names{output_name.data()};

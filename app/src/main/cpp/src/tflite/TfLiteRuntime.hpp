@@ -1,9 +1,9 @@
 #pragma once
 
-#include "PerformanceScope.hpp"
 #include "TfLiteUtils.hpp"
 #include "tflite/c/c_api.h" // IWYU pragma: export
 #include "tflite/c/common.h"
+#include "utils/Profiling.hpp"
 #include <cassert>
 #include <span>
 #include <string_view>
@@ -28,11 +28,11 @@ class TfLiteRuntime {
 
 	template <typename I, typename O>
 	void run_inference(std::span<const I> input, std::span<O> output) {
-		PROFILE_FUNCTION()
+		PROFILE_DEPTH_FUNCTION()
 
 		_load_input<I>(input);
 		{
-			PROFILE_SCOPE("Invoking of model")
+			PROFILE_DEPTH_SCOPE("Invoking of model")
 			CHECK_TFLITE_STATUS(TfLiteInterpreterInvoke, interpreter);
 		}
 		_read_output<O>(output);
@@ -40,7 +40,7 @@ class TfLiteRuntime {
 
   private:
 	template <typename I> void _load_input(std::span<const I> input) {
-		PROFILE_SCOPE("Loading input")
+		PROFILE_DEPTH_SCOPE("Loading input")
 
 		auto input_tensor = TfLiteInterpreterGetInputTensor(interpreter, 0);
 
@@ -52,7 +52,7 @@ class TfLiteRuntime {
 	}
 
 	template <typename O> void _read_output(std::span<O> output) {
-		PROFILE_SCOPE("Reading output")
+		PROFILE_DEPTH_SCOPE("Reading output")
 
 		auto output_tensor = TfLiteInterpreterGetOutputTensor(interpreter, 0);
 

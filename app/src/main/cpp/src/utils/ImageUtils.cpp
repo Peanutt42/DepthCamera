@@ -1,6 +1,6 @@
 #include "ImageUtils.hpp"
 #include "Log.hpp"
-#include "PerformanceScope.hpp"
+#include "Profiling.hpp"
 
 void check_android_bitmap_result(int result) {
 	if (result == ANDROID_BITMAP_RESULT_SUCCESS)
@@ -27,7 +27,7 @@ void bitmap_to_rgb_hwc_255_float_array(
 	jobject bitmap,
 	std::span<float> out_float_array
 ) {
-	PROFILE_FUNCTION()
+	PROFILE_CAMERA_FUNCTION()
 
 	AndroidBitmapInfo info;
 	check_android_bitmap_result(AndroidBitmap_getInfo(env, bitmap, &info));
@@ -67,7 +67,7 @@ void bitmap_to_rgb_chw_float_array(
 	jobject bitmap,
 	std::span<float> out_float_array
 ) {
-	PROFILE_FUNCTION()
+	PROFILE_CAMERA_FUNCTION()
 
 	AndroidBitmapInfo info;
 	check_android_bitmap_result(AndroidBitmap_getInfo(env, bitmap, &info));
@@ -110,7 +110,7 @@ void image_bytes_to_argb_int_array(
 	std::span<const jbyte> image_bytes,
 	std::span<jint> out_pixels
 ) {
-	PROFILE_FUNCTION()
+	PROFILE_CAMERA_FUNCTION()
 
 	if (image_bytes.size_bytes() != out_pixels.size_bytes()) {
 		LOG_ERROR("image_bytes and out_pixels do not have the same size!");

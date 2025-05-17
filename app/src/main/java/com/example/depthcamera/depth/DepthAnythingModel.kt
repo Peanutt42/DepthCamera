@@ -2,10 +2,8 @@ package com.example.depthcamera.depth
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.util.Log
 import android.util.Size
 import androidx.core.graphics.scale
-import com.example.depthcamera.DepthCameraApp
 import com.example.depthcamera.NativeLib
 
 class DepthAnythingModel(context: Context) : DepthModel {
@@ -27,11 +25,11 @@ class DepthAnythingModel(context: Context) : DepthModel {
 		NativeLib.shutdownDepthOnnxRuntime()
 	}
 
+	override fun getName(): String = MODEL_NAME
+
 	override fun getInputSize(): Size = INPUT_IMAGE_SIZE
 
 	override fun predictDepth(input: Bitmap): FloatArray {
-		Log.i(DepthCameraApp.APP_LOG_TAG, "Input resolution: ${input.width} X ${input.height}")
-
 		val scaled = input.scale(INPUT_IMAGE_DIM, INPUT_IMAGE_DIM)
 		val input = NativeLib.bitmapToRgbChwFloatArray(scaled)
 		var output = FloatArray(INPUT_IMAGE_DIM * INPUT_IMAGE_DIM)

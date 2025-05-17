@@ -51,11 +51,11 @@ class MiDaSDepthModel(context: Context) : DepthModel {
 		NativeLib.shutdownDepthTfLiteRuntime()
 	}
 
+	override fun getName(): String = MODEL_NAME
+
 	override fun getInputSize(): Size = INPUT_IMAGE_SIZE
 
 	override fun predictDepth(input: Bitmap): FloatArray {
-		Log.i(DepthCameraApp.APP_LOG_TAG, "Input resolution: ${input.width} X ${input.height}")
-
 		val scaled = input.scale(INPUT_IMAGE_DIM, INPUT_IMAGE_DIM)
 		val input = NativeLib.bitmapToRgbHwc255FloatArray(scaled)
 		var output = FloatArray(INPUT_IMAGE_DIM * INPUT_IMAGE_DIM)

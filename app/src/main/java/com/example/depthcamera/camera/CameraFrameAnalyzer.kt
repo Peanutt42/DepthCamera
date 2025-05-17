@@ -1,5 +1,6 @@
 package com.example.depthcamera.camera
 
+import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.widget.ImageView
 import android.widget.TextView
@@ -9,7 +10,6 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import com.example.depthcamera.NativeLib
 import com.example.depthcamera.depth.DepthModel
-import com.example.depthcamera.performance.PerformanceInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicReference
 /**
  * Helper class that analyses the camera feed images in realtime
  */
+@SuppressLint("SetTextI18n")
 class CameraFrameAnalyzer(
 	private var depthModel: DepthModel,
 	private var depthView: ImageView,
@@ -37,20 +38,26 @@ class CameraFrameAnalyzer(
 				val frame = latestCameraFrame.getAndSet(null)
 
 				if (frame != null) {
-					PerformanceInfo.newDepthFrame()
+					NativeLib.newDepthFrame()
 
 					val predictionOutput = depthModel.predictDepth(frame)
 
+					val inputWidth = frame.width
+					val inputHeight = frame.height
+
 					withContext(Dispatchers.Main) {
-						val colorMappedImage = PerformanceInfo.measureDepthScope("Depth colormap") {
-							NativeLib.depthColorMap(
-								predictionOutput,
-								depthModel.getInputSize()
-							)
-						}
+						val colorMappedImage = NativeLib.depthColorMap(
+							predictionOutput,
+							depthModel.getInputSize()
+						)
 						depthView.setImageBitmap(colorMappedImage)
 
-						performanceText.text = PerformanceInfo.formatted()
+						val formattedInputResolution = "${inputWidth}x${inputHeight}"
+						val modelName = depthModel.getName()
+						val modelInputSize = depthModel.getInputSize()
+						val formattedModelInputSize = "${modelInputSize.width}x${modelInputSize.height}"
+						performanceText.text =
+							"Model: $modelName\nCamera resolution: $formattedInputResolution --> Model input: $formattedModelInputSize\n\n${NativeLib.formatDepthFrame()}\n${NativeLib.formatCameraFrame()}"
 					}
 				}
 			}
@@ -60,11 +67,10 @@ class CameraFrameAnalyzer(
 	@OptIn(ExperimentalGetImage::class)
 	override fun analyze(image: ImageProxy) {
 		if (image.image != null) {
-			PerformanceInfo.newCameraFrame()
+			NativeLib.newCameraFrame()
 
-			val inputBitmap = PerformanceInfo.measureCameraScope("Convert input to bitmap") {
+			val inputBitmap =
 				NativeLib.imageToBitmap(image.image!!, image.imageInfo.rotationDegrees.toFloat())
-			}
 
 			latestCameraFrame.set(inputBitmap)
 		}

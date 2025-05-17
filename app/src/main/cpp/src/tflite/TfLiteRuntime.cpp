@@ -1,5 +1,5 @@
 #include "TfLiteRuntime.hpp"
-#include "PerformanceScope.hpp"
+#include "utils/Profiling.hpp"
 
 #include "tflite/c/common.h"
 #include <cassert>
@@ -15,7 +15,7 @@ TfLiteRuntime::TfLiteRuntime(
 	std::string_view gpu_delegate_serialization_dir,
 	std::string_view model_token
 ) {
-	PROFILE_SCOPE("Initialize TfLiteRuntime")
+	PROFILE_DEPTH_SCOPE("Initialize TfLiteRuntime")
 
 	model = TfLiteModelCreate(model_data.data(), model_data.size());
 
@@ -35,7 +35,7 @@ TfLiteRuntime::TfLiteRuntime(
 }
 
 TfLiteRuntime::~TfLiteRuntime() {
-	PROFILE_SCOPE("Shutdown TfLiteRuntime")
+	PROFILE_DEPTH_SCOPE("Shutdown TfLiteRuntime")
 
 	TfLiteInterpreterDelete(interpreter);
 	if (gpu_delegate)
@@ -49,8 +49,6 @@ void TfLiteRuntime::_load_nonquantized_input(
 	TfLiteTensor* input_tensor,
 	TfLiteType input_type
 ) {
-	PROFILE_FUNCTION()
-
 	if (input_tensor->type != input_type) {
 		LOG_ERROR(
 			"input type is {} but model requires the input to be {}",
@@ -104,5 +102,5 @@ void tflite_error_callback(
 	);
 	std::string formatted_error_msg(formatted_error_msg_buffer.data());
 
-	LOG_ERROR("[TFLITE ERROR CALLBACK] {}", formatted_error_msg.c_str());
+	LOG_ERROR("[TfLiteRuntime Error] {}", formatted_error_msg.c_str());
 }

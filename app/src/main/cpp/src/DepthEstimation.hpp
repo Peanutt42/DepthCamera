@@ -1,7 +1,7 @@
 #pragma once
 
-#include "OnnxRuntime.hpp"
-#include "TfLiteRuntime.hpp"
+#include "onnx/OnnxRuntime.hpp"
+#include "tflite/TfLiteRuntime.hpp"
 #include <span>
 
 constexpr size_t RGB_CHANNELS = 3;

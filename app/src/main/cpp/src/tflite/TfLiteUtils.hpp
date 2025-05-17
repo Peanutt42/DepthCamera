@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Log.hpp"
-#include "PerformanceScope.hpp"
+#include "utils/Log.hpp"
+#include "utils/Profiling.hpp"
 #include <cassert>
 #include <span>
 #include <string_view>
@@ -30,7 +30,7 @@ void quantize<float>(
 	TfLiteType quantized_type,
 	const TfLiteAffineQuantization& quantization
 ) {
-	PROFILE_FUNCTION()
+	PROFILE_DEPTH_FUNCTION()
 
 	if (quantized_type != kTfLiteUInt8) {
 		LOG_ERROR(
@@ -78,7 +78,7 @@ void dequantize<float>(
 	TfLiteType quantized_type,
 	const TfLiteAffineQuantization& quantization
 ) {
-	PROFILE_FUNCTION()
+	PROFILE_DEPTH_FUNCTION()
 
 	if (quantized_type != kTfLiteUInt8) {
 		LOG_ERROR(
@@ -117,7 +117,7 @@ inline static TfLiteDelegate* create_gpu_delegate(
 	std::string_view gpu_delegate_serialization_dir,
 	std::string_view model_token
 ) {
-	PROFILE_FUNCTION()
+	PROFILE_DEPTH_FUNCTION()
 
 	TfLiteGpuDelegateOptionsV2 gpu_delegate_options =
 		TfLiteGpuDelegateOptionsV2Default();

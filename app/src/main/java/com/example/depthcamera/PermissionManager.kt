@@ -1,4 +1,4 @@
-package com.example.depthcamera.utils
+package com.example.depthcamera
 
 import android.Manifest
 import android.content.ActivityNotFoundException

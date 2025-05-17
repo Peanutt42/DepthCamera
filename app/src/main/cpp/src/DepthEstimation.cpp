@@ -1,6 +1,6 @@
 #include "DepthEstimation.hpp"
-#include "ImageUtils.hpp"
-#include "PerformanceScope.hpp"
+#include "utils/ImageUtils.hpp"
+#include "utils/Profiling.hpp"
 
 void run_depth_estimation(
 	TfLiteRuntime& tflite_runtime,
@@ -9,7 +9,7 @@ void run_depth_estimation(
 	std::array<float, RGB_CHANNELS> mean,
 	std::array<float, RGB_CHANNELS> stddev
 ) {
-	PROFILE_FUNCTION()
+	PROFILE_DEPTH_FUNCTION()
 
 	normalize_rgb(input, mean, stddev);
 
@@ -25,7 +25,7 @@ void run_depth_estimation(
 	std::array<float, RGB_CHANNELS> mean,
 	std::array<float, RGB_CHANNELS> stddev
 ) {
-	PROFILE_FUNCTION()
+	PROFILE_DEPTH_FUNCTION()
 
 	normalize_rgb(input_data, mean, stddev);
 
@@ -39,7 +39,7 @@ void normalize_rgb(
 	std::array<float, RGB_CHANNELS> mean,
 	std::array<float, RGB_CHANNELS> stddev
 ) {
-	PROFILE_FUNCTION()
+	PROFILE_DEPTH_FUNCTION()
 
 	size_t channel = 0;
 
@@ -50,7 +50,7 @@ void normalize_rgb(
 }
 
 void min_max_scaling(std::span<float> values) {
-	PROFILE_FUNCTION()
+	PROFILE_DEPTH_FUNCTION()
 
 	if (values.empty())
 		return;
@@ -78,8 +78,6 @@ void depth_colormap(
 	std::span<const float> depth_values,
 	std::span<int> colormapped_pixels
 ) {
-	PROFILE_FUNCTION()
-
 	if (depth_values.size() != colormapped_pixels.size()) {
 		LOG_ERROR(
 			"depth_values and colormapped_pixels do not have the same size!"
