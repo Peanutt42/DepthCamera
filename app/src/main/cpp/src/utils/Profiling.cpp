@@ -1,8 +1,9 @@
 #include "Profiling.hpp"
+#include <algorithm>
 #include <chrono>
 #include <format>
 
-std::string padding_tabs(size_t amount) {
+static std::string padding_tabs(size_t amount) {
 	std::string result;
 	result.reserve(amount * 4);
 	for (size_t i = 0; i < amount; i++) {
@@ -11,25 +12,19 @@ std::string padding_tabs(size_t amount) {
 	return result;
 }
 
-std::string format_duration_millis(profile_clock::duration duration) {
+static std::string format_duration_millis(profile_clock::duration duration) {
 	auto duration_micros =
 		std::chrono::duration_cast<std::chrono::microseconds>(duration);
 	return std::format("{:.2f} ms", (float)duration_micros.count() / 1000.0f);
 }
 
 ProfileScope::ProfileScope(std::string_view name, ProfilingFrame& frame)
-	: name(name), frame(frame), start(profile_clock::now()) {
-	scope_depth = frame.start_scope();
-}
+	: name(name), frame(frame), start(profile_clock::now()),
+	  scope_depth(frame.start_scope()) {}
 
-ProfileScope::~ProfileScope() {
+ProfileScope::~ProfileScope() noexcept {
 	auto duration = profile_clock::now() - start;
-	frame.end_scope(ProfileScopeRecord{
-		name,
-		scope_depth,
-		start,
-		duration
-	});
+	frame.end_scope(ProfileScopeRecord(name, scope_depth, start, duration));
 }
 
 std::string ProfileScopeRecord::formatted() const {
@@ -39,20 +34,26 @@ std::string ProfileScopeRecord::formatted() const {
 	);
 }
 
-int ProfilingFrame::start_scope() { return current_frame_scope_depth++; }
+int ProfilingFrame::start_scope() noexcept {
+	return current_frame_scope_depth++;
+}
 
-void ProfilingFrame::end_scope(ProfileScopeRecord scope) {
-	profile_scopes.push_back(scope);
+void ProfilingFrame::end_scope(ProfileScopeRecord scope) noexcept {
+	// NOLINTBEGIN(bugprone-empty-catch)
+	try {
+		profile_scopes.push_back(scope);
+	} catch (const std::exception&) {
+	}
+	// NOLINTEND(bugprone-empty-catch)
 	current_frame_scope_depth--;
 }
 
 std::string ProfilingFrame::finish() {
 	auto end = profile_clock::now();
 
-	std::sort(
-		profile_scopes.begin(), profile_scopes.end(),
-		[](const auto& a, const auto& b) -> bool { return a.start < b.start; }
-	);
+	std::ranges::sort(profile_scopes, [](const auto& a, const auto& b) -> bool {
+		return a.start < b.start;
+	});
 	std::string profile_scopes_formatted;
 	for (const auto& profile_scope : profile_scopes) {
 		profile_scopes_formatted +=
@@ -78,18 +79,18 @@ std::string ProfilingFrame::finish() {
 }
 
 ProfilingFrame& get_depth_profiling_frame() {
-	static ProfilingFrame DEPTH_PROFILING_FRAME = ProfilingFrame("Depth");
-	return DEPTH_PROFILING_FRAME;
+	static ProfilingFrame depth_profiling_frame = ProfilingFrame("Depth");
+	return depth_profiling_frame;
 }
 std::string& get_last_depth_profiling_frame_formatted() {
-	static std::string LAST_DEPTH_PROFILING_FRAME_FORMATTED;
-	return LAST_DEPTH_PROFILING_FRAME_FORMATTED;
+	static std::string last_depth_profiling_frame_formatted;
+	return last_depth_profiling_frame_formatted;
 }
 ProfilingFrame& get_camera_profiling_frame() {
-	static ProfilingFrame CAMERA_PROFILING_FRAME = ProfilingFrame("Depth");
-	return CAMERA_PROFILING_FRAME;
+	static ProfilingFrame camera_profiling_frame = ProfilingFrame("Camera");
+	return camera_profiling_frame;
 }
 std::string& get_last_camera_profiling_frame_formatted() {
-	static std::string LAST_CAMERA_PROFILING_FRAME_FORMATTED;
-	return LAST_CAMERA_PROFILING_FRAME_FORMATTED;
+	static std::string last_camera_profiling_frame_formatted;
+	return last_camera_profiling_frame_formatted;
 }

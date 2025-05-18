@@ -1,6 +1,8 @@
 #include "ImageUtils.hpp"
 #include "Log.hpp"
 #include "Profiling.hpp"
+#include "utils/Error.hpp"
+#include <cstddef>
 
 void check_android_bitmap_result(int result) {
 	if (result == ANDROID_BITMAP_RESULT_SUCCESS)
@@ -22,7 +24,7 @@ void check_android_bitmap_result(int result) {
 	}
 }
 
-void bitmap_to_rgb_hwc_255_float_array(
+Option<BitmapError> bitmap_to_rgb_hwc_255_float_array(
 	JNIEnv* env,
 	jobject bitmap,
 	std::span<float> out_float_array
@@ -32,27 +34,31 @@ void bitmap_to_rgb_hwc_255_float_array(
 	AndroidBitmapInfo info;
 	check_android_bitmap_result(AndroidBitmap_getInfo(env, bitmap, &info));
 
-	if (info.format != ANDROID_BITMAP_FORMAT_RGBA_8888) {
-		LOG_ERROR("Bitmap format is not RGBA 8888!");
-		return;
-	}
+	if (info.format != ANDROID_BITMAP_FORMAT_RGBA_8888)
+		return BitmapError::FormatNotRGBA8888;
 
-	if (out_float_array.size() < info.width * info.height * 3) {
-		LOG_ERROR("out_float_array is too small for this bitmap!");
-		return;
-	}
+	if (out_float_array.size() != (size_t)info.width * (size_t)info.height * 3)
+		return BitmapError::WrongOutputArraySize;
 
-	void* addressPtr = nullptr;
+	void* address_ptr = nullptr;
 	check_android_bitmap_result(
-		AndroidBitmap_lockPixels(env, bitmap, &addressPtr)
+		AndroidBitmap_lockPixels(env, bitmap, &address_ptr)
 	);
-	// RGBA 8888 -> one int for each pixel
-	int* pixelPtr = (int*)addressPtr;
+	if (address_ptr == nullptr)
+		return BitmapError::FailedToLockPixels;
+	// RGBA 8888 -> one int for each pixel, lint supression needed because of c
+	// api
+	// NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
+	const auto pixel_ptr = std::span<int>(
+		reinterpret_cast<int*>(address_ptr),
+		(size_t)info.width * (size_t)info.height
+	);
+	// NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
 
 	size_t i = 0;
 	size_t j = 0;
-	for (; i < info.width * info.height; i++) {
-		int pixel_color = pixelPtr[i];
+	for (; i < (size_t)info.width * (size_t)info.height; i++) {
+		const int pixel_color = pixel_ptr[i];
 		out_float_array[j++] = (float)red_channel_from_argb_color(pixel_color);
 		out_float_array[j++] =
 			(float)green_channel_from_argb_color(pixel_color);
@@ -60,9 +66,11 @@ void bitmap_to_rgb_hwc_255_float_array(
 	}
 
 	check_android_bitmap_result(AndroidBitmap_unlockPixels(env, bitmap));
+
+	return None;
 }
 
-void bitmap_to_rgb_chw_float_array(
+Option<BitmapError> bitmap_to_rgb_chw_float_array(
 	JNIEnv* env,
 	jobject bitmap,
 	std::span<float> out_float_array
@@ -72,29 +80,34 @@ void bitmap_to_rgb_chw_float_array(
 	AndroidBitmapInfo info;
 	check_android_bitmap_result(AndroidBitmap_getInfo(env, bitmap, &info));
 
-	if (info.format != ANDROID_BITMAP_FORMAT_RGBA_8888) {
-		LOG_ERROR("Bitmap format is not RGBA 8888!");
-		return;
-	}
+	if (info.format != ANDROID_BITMAP_FORMAT_RGBA_8888)
+		return BitmapError::FormatNotRGBA8888;
 
-	if (out_float_array.size() < info.width * info.height * 3) {
-		LOG_ERROR("out_float_array is too small for this bitmap!");
-		return;
-	}
+	if (out_float_array.size() != (size_t)info.width * (size_t)info.height * 3)
+		return BitmapError::WrongOutputArraySize;
 
-	void* addressPtr = nullptr;
+	void* address_ptr = nullptr;
 	check_android_bitmap_result(
-		AndroidBitmap_lockPixels(env, bitmap, &addressPtr)
+		AndroidBitmap_lockPixels(env, bitmap, &address_ptr)
 	);
+	if (address_ptr == nullptr)
+		return BitmapError::FailedToLockPixels;
 	// RGBA 8888 -> one int for each pixel
-	int* pixelPtr = (int*)addressPtr;
+	// NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
+	const auto int_pixels = std::span<int>(
+		reinterpret_cast<int*>(address_ptr),
+		(size_t)info.width * (size_t)info.height
+	);
+	// NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
 
 	const size_t red_channel_offset = 0;
-	const size_t green_channel_offset = info.width * info.height;
-	const size_t blue_channel_offset = 2 * info.width * info.height;
+	const size_t green_channel_offset =
+		(size_t)info.width * (size_t)info.height;
+	const size_t blue_channel_offset =
+		2 * (size_t)info.width * (size_t)info.height;
 
-	for (size_t i = 0; i < info.width * info.height; i++) {
-		int pixel_color = pixelPtr[i];
+	for (size_t i = 0; i < (size_t)info.width * (size_t)info.height; i++) {
+		const int pixel_color = int_pixels[i];
 		out_float_array[red_channel_offset + i] =
 			(float)red_channel_from_argb_color(pixel_color) / 255.f;
 		out_float_array[green_channel_offset + i] =
@@ -104,18 +117,18 @@ void bitmap_to_rgb_chw_float_array(
 	}
 
 	check_android_bitmap_result(AndroidBitmap_unlockPixels(env, bitmap));
+
+	return None;
 }
 
-void image_bytes_to_argb_int_array(
+Option<ImageError> image_bytes_to_argb_int_array(
 	std::span<const jbyte> image_bytes,
 	std::span<jint> out_pixels
 ) {
 	PROFILE_CAMERA_FUNCTION()
 
-	if (image_bytes.size_bytes() != out_pixels.size_bytes()) {
-		LOG_ERROR("image_bytes and out_pixels do not have the same size!");
-		return;
-	}
+	if (image_bytes.size_bytes() != out_pixels.size_bytes())
+		return ImageError::WrongOutPixelSize;
 
 	size_t i = 0;
 	size_t j = 0;
@@ -126,4 +139,6 @@ void image_bytes_to_argb_int_array(
 		auto a = image_bytes[j++];
 		out_pixels[i] = color_argb(a, r, g, b);
 	}
+
+	return None;
 }

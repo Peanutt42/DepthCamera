@@ -8,3 +8,5 @@ PointerAlignment: Left
 BinPackParameters: false
 AllowAllParametersOfDeclarationOnNextLine: false
 AlignAfterOpenBracket: BlockIndent
+AlwaysBreakTemplateDeclarations: Yes
+SpaceAfterTemplateKeyword: false

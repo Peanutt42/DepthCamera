@@ -1,5 +1,6 @@
 #pragma once
 
+#include "utils/Error.hpp"
 #include "utils/Log.hpp"
 #include "utils/Profiling.hpp"
 #include <cassert>
@@ -15,16 +16,16 @@ inline static bool is_tensor_quantized(const TfLiteTensor* tensor) {
 	return tensor->quantization.type == kTfLiteAffineQuantization;
 }
 
-template <typename T>
-inline static void quantize(
+template<typename T>
+inline static Option<TfLiteRuntimeError> quantize(
 	std::span<const T> values,
 	std::span<std::byte> quantized_values,
 	TfLiteType quantized_type,
 	const TfLiteAffineQuantization& quantization
 );
 
-template <>
-void quantize<float>(
+template<>
+Option<TfLiteRuntimeError> quantize<float>(
 	std::span<const float> values,
 	std::span<std::byte> quantized_values,
 	TfLiteType quantized_type,
@@ -32,47 +33,39 @@ void quantize<float>(
 ) {
 	PROFILE_DEPTH_FUNCTION()
 
-	if (quantized_type != kTfLiteUInt8) {
-		LOG_ERROR(
-			"Unsupported quantization from float32 to {}",
-			format_tflite_type(quantized_type)
-		);
-		return;
-	}
+	if (quantized_type != kTfLiteUInt8)
+		return TfLiteRuntimeError::UnsupportedTypeQuantization;
 
-	static_assert(sizeof(std::byte) == sizeof(uint8_t));
-	auto quantized_uint8_values = std::span<uint8_t>(
-		(uint8_t*)quantized_values.data(), quantized_values.size()
-	);
-
-	if (values.size() != quantized_uint8_values.size()) {
-		LOG_ERROR(
-			"values and quantized_uint8_values do not have the same length"
-		);
-		return;
-	}
+	if (values.size() != quantized_values.size())
+		return TfLiteRuntimeError::InvalidInputSize;
 
 	// for now, only 1 input, 1 output
-	assert(quantization.scale->size == 1);
+	if (quantization.scale->size != 1)
+		return TfLiteRuntimeError::UnsupportedAsymmetricQuantization;
 	const float quantization_scale = quantization.scale->data[0];
-	assert(quantization.zero_point->size == 1);
+	if (quantization.zero_point->size != 1)
+		return TfLiteRuntimeError::UnsupportedAsymmetricQuantization;
 	const int quantization_zero_point = quantization.zero_point->data[0];
 
 	for (size_t i = 0; i < values.size(); i++) {
-		quantized_uint8_values[i] = (uint8_t)(values[i] / quantization_scale) +
-									(uint8_t)quantization_zero_point;
+		static_assert(sizeof(std::byte) == sizeof(uint8_t));
+		quantized_values[i] =
+			(std::byte)((uint8_t)(values[i] / quantization_scale) +
+						quantization_zero_point);
 	}
+
+	return None;
 }
 
-template <typename T>
-inline static void dequantize(
+template<typename T>
+inline static Option<TfLiteRuntimeError> dequantize(
 	std::span<const std::byte> quantized_values,
 	std::span<T> real_values,
 	TfLiteType quantized_type,
 	const TfLiteAffineQuantization& quantization
 );
-template <>
-void dequantize<float>(
+template<>
+Option<TfLiteRuntimeError> dequantize<float>(
 	std::span<const std::byte> quantized_values,
 	std::span<float> real_values,
 	TfLiteType quantized_type,
@@ -80,37 +73,28 @@ void dequantize<float>(
 ) {
 	PROFILE_DEPTH_FUNCTION()
 
-	if (quantized_type != kTfLiteUInt8) {
-		LOG_ERROR(
-			"Unsupported dequantization from {} to float32",
-			format_tflite_type(quantized_type)
-		);
-		return;
-	}
+	if (quantized_type != kTfLiteUInt8)
+		return TfLiteRuntimeError::UnsupportedTypeQuantization;
 
-	static_assert(sizeof(std::byte) == sizeof(uint8_t));
-	auto quantized_uint8_values = std::span<const uint8_t>(
-		(const uint8_t*)quantized_values.data(), quantized_values.size()
-	);
-
-	if (quantized_uint8_values.size() != real_values.size()) {
-		LOG_ERROR(
-			"quantized_uint8_values and real_values do not have the same length"
-		);
-		return;
-	}
+	if (quantized_values.size() != real_values.size())
+		return TfLiteRuntimeError::InvalidOutputSize;
 
 	// for now, only 1 input, 1 output
-	assert(quantization.scale->size == 1);
+	if (quantization.scale->size != 1)
+		return TfLiteRuntimeError::UnsupportedAsymmetricQuantization;
 	const float quantization_scale = quantization.scale->data[0];
-	assert(quantization.zero_point->size == 1);
+	if (quantization.zero_point->size != 1)
+		return TfLiteRuntimeError::UnsupportedAsymmetricQuantization;
 	const int quantization_zero_point = quantization.zero_point->data[0];
 
 	for (size_t i = 0; i < real_values.size(); i++) {
+		static_assert(sizeof(std::byte) == sizeof(uint8_t));
+		const auto quantized = (const uint8_t)quantized_values[i];
 		real_values[i] =
-			quantization_scale *
-			(float)(quantized_uint8_values[i] - quantization_zero_point);
+			quantization_scale * (float)(quantized - quantization_zero_point);
 	}
+
+	return None;
 }
 
 inline static TfLiteDelegate* create_gpu_delegate(
@@ -121,7 +105,7 @@ inline static TfLiteDelegate* create_gpu_delegate(
 
 	TfLiteGpuDelegateOptionsV2 gpu_delegate_options =
 		TfLiteGpuDelegateOptionsV2Default();
-	gpu_delegate_options.is_precision_loss_allowed = true;
+	gpu_delegate_options.is_precision_loss_allowed = (int32_t)true;
 	gpu_delegate_options.inference_preference =
 		TFLITE_GPU_INFERENCE_PREFERENCE_FAST_SINGLE_ANSWER;
 	gpu_delegate_options.experimental_flags |= TfLiteGpuExperimentalFlags::
@@ -133,7 +117,7 @@ inline static TfLiteDelegate* create_gpu_delegate(
 	return TfLiteGpuDelegateV2Create(&gpu_delegate_options);
 }
 
-template <typename T>
+template<typename T>
 inline constexpr TfLiteType TFLITE_TYPE_FROM_TYPE = kTfLiteNoType;
 
 // clang-format off
@@ -152,11 +136,10 @@ template<> inline constexpr TfLiteType TFLITE_TYPE_FROM_TYPE<uint16_t> = kTfLite
 template<> inline constexpr TfLiteType TFLITE_TYPE_FROM_TYPE<TfLiteBFloat16> = kTfLiteBFloat16;
 // clang-format on
 
-/// returns 0 if unknown
-inline static size_t get_tflite_type_size(TfLiteType type) {
+inline static Option<size_t> get_tflite_type_size(TfLiteType type) {
 	switch (type) {
 	default:
-		return 0; // unknown
+		return None;
 	case kTfLiteFloat32:
 		return sizeof(float);
 	case kTfLiteInt32:

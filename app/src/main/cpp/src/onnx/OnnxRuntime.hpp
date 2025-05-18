@@ -1,6 +1,7 @@
 #pragma once
 
 #include "onnxruntime_c_api.h"
+#include "utils/Error.hpp"
 #include <cassert>
 #include <onnxruntime_cxx_api.h>
 #include <span>
@@ -10,12 +11,15 @@ class OnnxRuntime {
   public:
 	explicit OnnxRuntime(std::span<const std::byte> model_data);
 
-	template <typename I, typename O>
-	void run_inference(std::span<I> input_data, std::span<O> output_data) {
-		assert(input_type == Ort::TypeToTensorType<I>::type);
-		assert(output_type == Ort::TypeToTensorType<O>::type);
+	template<typename I, typename O>
+	Option<OnnxRuntimeError>
+	run_inference(std::span<I> input_data, std::span<O> output_data) {
+		if (input_type != Ort::TypeToTensorType<I>::type)
+			return OnnxRuntimeError::InvalidInputType;
+		if (output_type != Ort::TypeToTensorType<O>::type)
+			return OnnxRuntimeError::InvalidOutputType;
 
-		_run_inference(
+		return run_inference_raw(
 			std::as_writable_bytes(input_data),
 			std::as_writable_bytes(output_data)
 		);
@@ -26,12 +30,11 @@ class OnnxRuntime {
 	static void log_error_ort_exception(const Ort::Exception& exception);
 
   private:
-	void _run_inference(
+	Option<OnnxRuntimeError> run_inference_raw(
 		std::span<std::byte> input_data,
 		std::span<std::byte> output_data
 	);
 
-  private:
 	Ort::Env env;
 	Ort::Session session;
 	Ort::MemoryInfo memory_info;

@@ -7,7 +7,7 @@
 struct NativeFloatArrayScope {
 	explicit NativeFloatArrayScope(JNIEnv* env, jfloatArray array)
 		: array(array), env(env) {
-		size_t length = env->GetArrayLength(array);
+		const size_t length = env->GetArrayLength(array);
 		jfloat* pointer = env->GetFloatArrayElements(array, nullptr);
 		native_array = std::span<jfloat>(pointer, length);
 	}
@@ -16,13 +16,18 @@ struct NativeFloatArrayScope {
 		env->ReleaseFloatArrayElements(array, native_array.data(), 0);
 	}
 
-	[[nodiscard]] inline std::span<const jfloat> as_span() const {
+	NativeFloatArrayScope(const NativeFloatArrayScope&) = delete;
+	NativeFloatArrayScope(NativeFloatArrayScope&&) = delete;
+	void operator=(const NativeFloatArrayScope&) = delete;
+	void operator=(NativeFloatArrayScope&&) = delete;
+
+	[[nodiscard]] std::span<const jfloat> as_span() const {
 		return native_array;
 	}
 
-	[[nodiscard]] inline std::span<jfloat> as_span() { return native_array; }
+	[[nodiscard]] std::span<jfloat> as_span() { return native_array; }
 
-	[[nodiscard]] inline size_t size() const { return native_array.size(); }
+	[[nodiscard]] size_t size() const { return native_array.size(); }
 
   private:
 	jfloatArray array = nullptr;
@@ -33,7 +38,7 @@ struct NativeFloatArrayScope {
 struct NativeByteArrayScope {
 	explicit NativeByteArrayScope(JNIEnv* env, jbyteArray array)
 		: array(array), env(env) {
-		size_t length = env->GetArrayLength(array);
+		const size_t length = env->GetArrayLength(array);
 		jbyte* pointer = env->GetByteArrayElements(array, nullptr);
 		native_array = std::span<jbyte>(pointer, length);
 	}
@@ -42,13 +47,18 @@ struct NativeByteArrayScope {
 		env->ReleaseByteArrayElements(array, native_array.data(), 0);
 	}
 
-	[[nodiscard]] inline std::span<const jbyte> as_span() const {
+	NativeByteArrayScope(NativeByteArrayScope&&) = delete;
+	NativeByteArrayScope(const NativeByteArrayScope&) = delete;
+	void operator=(const NativeByteArrayScope&) = delete;
+	void operator=(NativeByteArrayScope&&) = delete;
+
+	[[nodiscard]] std::span<const jbyte> as_span() const {
 		return native_array;
 	}
 
-	[[nodiscard]] inline std::span<jbyte> as_span() { return native_array; }
+	[[nodiscard]] std::span<jbyte> as_span() { return native_array; }
 
-	[[nodiscard]] inline size_t size() const { return native_array.size(); }
+	[[nodiscard]] size_t size() const { return native_array.size(); }
 
   private:
 	jbyteArray array = nullptr;
@@ -59,7 +69,7 @@ struct NativeByteArrayScope {
 struct NativeIntArrayScope {
 	explicit NativeIntArrayScope(JNIEnv* env, jintArray array)
 		: array(array), env(env) {
-		size_t length = env->GetArrayLength(array);
+		const size_t length = env->GetArrayLength(array);
 		jint* pointer = env->GetIntArrayElements(array, nullptr);
 		native_array = std::span<jint>(pointer, length);
 	}
@@ -68,13 +78,16 @@ struct NativeIntArrayScope {
 		env->ReleaseIntArrayElements(array, native_array.data(), 0);
 	}
 
-	[[nodiscard]] inline std::span<const jint> as_span() const {
-		return native_array;
-	}
+	NativeIntArrayScope(NativeIntArrayScope&&) = delete;
+	NativeIntArrayScope(const NativeIntArrayScope&) = delete;
+	void operator=(NativeIntArrayScope&&) = delete;
+	void operator=(const NativeIntArrayScope&) = delete;
 
-	[[nodiscard]] inline std::span<jint> as_span() { return native_array; }
+	[[nodiscard]] std::span<const jint> as_span() const { return native_array; }
 
-	[[nodiscard]] inline size_t size() const { return native_array.size(); }
+	[[nodiscard]] std::span<jint> as_span() { return native_array; }
+
+	[[nodiscard]] size_t size() const { return native_array.size(); }
 
   private:
 	jintArray array = nullptr;
@@ -84,18 +97,20 @@ struct NativeIntArrayScope {
 
 struct NativeStringScope {
 	explicit NativeStringScope(JNIEnv* env, jstring string)
-		: string(string), env(env) {
-		native_string = env->GetStringUTFChars(string, nullptr);
-	}
+		: string(string), env(env),
+		  native_string(env->GetStringUTFChars(string, nullptr)) {}
 
-	~NativeStringScope() {
-		env->ReleaseStringUTFChars(string, native_string.data());
-	}
+	~NativeStringScope() { env->ReleaseStringUTFChars(string, native_string); }
+
+	NativeStringScope(NativeStringScope&&) = delete;
+	NativeStringScope(const NativeStringScope&) = delete;
+	void operator=(NativeStringScope&&) = delete;
+	void operator=(const NativeStringScope&) = delete;
 
 	[[nodiscard]] std::string_view get() const { return native_string; }
 
   private:
 	JNIEnv* env = nullptr;
 	jstring string = nullptr;
-	std::string_view native_string;
+	const char* native_string;
 };

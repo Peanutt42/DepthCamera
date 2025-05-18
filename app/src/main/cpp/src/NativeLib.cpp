@@ -10,9 +10,15 @@
 #include "utils/NativeJavaScopes.hpp"
 #include "utils/Profiling.hpp"
 
+// these 2 global variables are only used by a single thread from the kotlin
+// side NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
 static std::unique_ptr<TfLiteRuntime> depth_estimation_tflite_runtime = nullptr;
 
 static std::unique_ptr<OnnxRuntime> depth_estimation_onnx_runtime = nullptr;
+// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
+
+// NOLINTBEGIN(readability-identifier-naming,
+// bugprone-easily-swappable-parameters)
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_example_depthcamera_NativeLib_initDepthTfLiteRuntime(
@@ -24,10 +30,10 @@ Java_com_example_depthcamera_NativeLib_initDepthTfLiteRuntime(
 ) {
 
 	NativeByteArrayScope model_data(env, model);
-	NativeStringScope gpu_delegate_serialization_dir_string(
+	const NativeStringScope gpu_delegate_serialization_dir_string(
 		env, gpu_delegate_serialization_dir
 	);
-	NativeStringScope model_token_string(env, model_token);
+	const NativeStringScope model_token_string(env, model_token);
 
 	depth_estimation_tflite_runtime = std::make_unique<TfLiteRuntime>(
 		model_data.as_span(), gpu_delegate_serialization_dir_string.get(),
@@ -64,13 +70,13 @@ Java_com_example_depthcamera_NativeLib_runDepthTfLiteInference(
 	NativeFloatArrayScope input_array(env, input);
 	NativeFloatArrayScope output_array(env, output);
 
-	std::array<float, 3> mean = {mean_r, mean_g, mean_b};
-	std::array<float, 3> stddev = {stddev_r, stddev_g, stddev_b};
+	const std::array<float, 3> mean = {mean_r, mean_g, mean_b};
+	const std::array<float, 3> stddev = {stddev_r, stddev_g, stddev_b};
 
-	run_depth_estimation(
+	LOG_OPT_ERROR(run_depth_estimation(
 		*depth_estimation_tflite_runtime, input_array.as_span(),
 		output_array.as_span(), mean, stddev
-	);
+	));
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -114,13 +120,13 @@ Java_com_example_depthcamera_NativeLib_runDepthOnnxInference(
 	NativeFloatArrayScope input_array(env, input_data);
 	NativeFloatArrayScope output_array(env, output_data);
 
-	std::array<float, 3> mean = {mean_r, mean_g, mean_b};
-	std::array<float, 3> stddev = {stddev_r, stddev_g, stddev_b};
+	const std::array<float, 3> mean = {mean_r, mean_g, mean_b};
+	const std::array<float, 3> stddev = {stddev_r, stddev_g, stddev_b};
 
-	run_depth_estimation(
+	LOG_OPT_ERROR(run_depth_estimation(
 		*depth_estimation_onnx_runtime, input_array.as_span(),
 		output_array.as_span(), mean, stddev
-	);
+	));
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -134,9 +140,9 @@ Java_com_example_depthcamera_NativeLib_depthColormap(
 	NativeIntArrayScope colormapped_pixel_array(env, colormapped_pixels);
 
 	if (depth_value_array.size() == colormapped_pixel_array.size()) {
-		depth_colormap(
+		LOG_OPT_ERROR(depth_colormap(
 			depth_value_array.as_span(), colormapped_pixel_array.as_span()
-		);
+		));
 	} else {
 		LOG_ERROR(
 			"depth and colormapped pixel array should have the same length! "
@@ -155,7 +161,10 @@ Java_com_example_depthcamera_NativeLib_bitmapToRgbChwFloatArray(
 ) {
 
 	NativeFloatArrayScope out_float_array_scope(env, out_float_array);
-	bitmap_to_rgb_chw_float_array(env, bitmap, out_float_array_scope.as_span());
+
+	LOG_OPT_ERROR(bitmap_to_rgb_chw_float_array(
+		env, bitmap, out_float_array_scope.as_span()
+	));
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -167,9 +176,9 @@ Java_com_example_depthcamera_NativeLib_bitmapToRgbHwc255FloatArray(
 ) {
 
 	NativeFloatArrayScope out_float_array_scope(env, out_float_array);
-	bitmap_to_rgb_hwc_255_float_array(
+	LOG_OPT_ERROR(bitmap_to_rgb_hwc_255_float_array(
 		env, bitmap, out_float_array_scope.as_span()
-	);
+	));
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -183,9 +192,9 @@ Java_com_example_depthcamera_NativeLib_imageBytesToArgbIntArray(
 	NativeByteArrayScope image_byte_array(env, image_bytes);
 	NativeIntArrayScope out_int_array_scope(env, out_int_array);
 
-	image_bytes_to_argb_int_array(
+	LOG_OPT_ERROR(image_bytes_to_argb_int_array(
 		image_byte_array.as_span(), out_int_array_scope.as_span()
-	);
+	));
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -201,7 +210,8 @@ Java_com_example_depthcamera_NativeLib_formatDepthFrame(
 	JNIEnv* env,
 	jobject /*this*/
 ) {
-	return env->NewStringUTF(get_last_depth_profiling_frame_formatted().c_str()
+	return env->NewStringUTF(
+		get_last_depth_profiling_frame_formatted().c_str()
 	);
 }
 extern "C" JNIEXPORT void JNICALL
@@ -217,6 +227,10 @@ Java_com_example_depthcamera_NativeLib_formatCameraFrame(
 	JNIEnv* env,
 	jobject /*this*/
 ) {
-	return env->NewStringUTF(get_last_camera_profiling_frame_formatted().c_str()
+	return env->NewStringUTF(
+		get_last_camera_profiling_frame_formatted().c_str()
 	);
 }
+
+// NOLINTEND(readability-identifier-naming,
+// bugprone-easily-swappable-parameters)

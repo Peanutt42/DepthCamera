@@ -1,8 +1,10 @@
 #include "DepthEstimation.hpp"
+
 #include "utils/ImageUtils.hpp"
 #include "utils/Profiling.hpp"
+#include <algorithm>
 
-void run_depth_estimation(
+Option<TfLiteRuntimeError> run_depth_estimation(
 	TfLiteRuntime& tflite_runtime,
 	std::span<float> input,
 	std::span<float> output,
@@ -13,12 +15,16 @@ void run_depth_estimation(
 
 	normalize_rgb(input, mean, stddev);
 
-	tflite_runtime.run_inference<float, float>(input, output);
+	if (const auto error =
+			tflite_runtime.run_inference<float, float>(input, output))
+		return error;
 
 	min_max_scaling(output);
+
+	return None;
 }
 
-void run_depth_estimation(
+Option<OnnxRuntimeError> run_depth_estimation(
 	OnnxRuntime& onnx_runtime,
 	std::span<float> input_data,
 	std::span<float> output_data,
@@ -29,9 +35,13 @@ void run_depth_estimation(
 
 	normalize_rgb(input_data, mean, stddev);
 
-	onnx_runtime.run_inference<float, float>(input_data, output_data);
+	if (const auto error =
+			onnx_runtime.run_inference<float, float>(input_data, output_data))
+		return error;
 
 	min_max_scaling(output_data);
+
+	return None;
 }
 
 void normalize_rgb(
@@ -55,11 +65,11 @@ void min_max_scaling(std::span<float> values) {
 	if (values.empty())
 		return;
 
-	const auto [min_iter, max_iter] =
-		std::minmax_element(values.begin(), values.end());
-	float min = *min_iter, max = *max_iter;
+	const auto [min_iter, max_iter] = std::ranges::minmax_element(values);
+	const float min = *min_iter;
+	const float max = *max_iter;
 
-	float diff = max - min;
+	const float diff = max - min;
 
 	if (diff > 0.0f) {
 		for (float& value : values) {
@@ -72,22 +82,20 @@ void min_max_scaling(std::span<float> values) {
 	}
 }
 
-int inferno_depth_colormap(float relative_depth);
+static int inferno_depth_colormap(float relative_depth);
 
-void depth_colormap(
+Option<ColormapError> depth_colormap(
 	std::span<const float> depth_values,
 	std::span<int> colormapped_pixels
 ) {
-	if (depth_values.size() != colormapped_pixels.size()) {
-		LOG_ERROR(
-			"depth_values and colormapped_pixels do not have the same size!"
-		);
-		return;
-	}
+	if (depth_values.size() != colormapped_pixels.size())
+		return ColormapError::WrongOutputArraySize;
 
 	for (size_t i = 0; i < depth_values.size(); i++) {
 		colormapped_pixels[i] = inferno_depth_colormap(depth_values[i]);
 	}
+
+	return None;
 }
 
 constexpr size_t INFERNO_COLOR_COUNT = 256;
@@ -97,7 +105,7 @@ constexpr size_t INFERNO_COLOR_COUNT = 256;
  * value based on:
  * https://github.com/kennethmoreland-com/kennethmoreland-com.github.io/blob/master/color-advice/inferno/inferno-table-byte-0256.csv
  */
-constexpr int INFERNO_COLORS[INFERNO_COLOR_COUNT] = {
+constexpr std::array<int, INFERNO_COLOR_COUNT> INFERNO_COLORS = {
 	color_rgb(0, 0, 4),		  color_rgb(1, 0, 5),
 	color_rgb(1, 1, 6),		  color_rgb(1, 1, 8),
 	color_rgb(2, 1, 10),	  color_rgb(2, 2, 12),

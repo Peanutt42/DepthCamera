@@ -1,13 +1,14 @@
 #include "OnnxRuntime.hpp"
-#include "utils/Log.hpp"
-#include "utils/Profiling.hpp"
 #include "onnxruntime_c_api.h"
 #include "onnxruntime_cxx_api.h"
+#include "utils/Error.hpp"
+#include "utils/Log.hpp"
+#include "utils/Profiling.hpp"
 
 #include <cpu_provider_factory.h>
 #include <nnapi_provider_factory.h>
 
-void onnx_logging_callback(
+static void onnx_logging_callback(
 	void* /*param*/,
 	OrtLoggingLevel severity,
 	const char* category,
@@ -46,10 +47,11 @@ OnnxRuntime::OnnxRuntime(std::span<const std::byte> model_data)
 	session_options.SetGraphOptimizationLevel(ORT_ENABLE_ALL);
 
 	check_ort_status(
-		OrtSessionOptionsAppendExecutionProvider_CPU(session_options, true)
+		OrtSessionOptionsAppendExecutionProvider_CPU(session_options, (int)true)
 	);
 	// TODO: test out what impact NNAPI_FLAG_USE_FP16 has
-	uint32_t nnapi_flags = NNAPI_FLAG_USE_FP16; // | NNAPI_FLAG_CPU_DISABLED;
+	const uint32_t nnapi_flags =
+		NNAPI_FLAG_USE_FP16; // | NNAPI_FLAG_CPU_DISABLED;
 	check_ort_status(OrtSessionOptionsAppendExecutionProvider_Nnapi(
 		session_options, nnapi_flags
 	));
@@ -85,7 +87,7 @@ OnnxRuntime::OnnxRuntime(std::span<const std::byte> model_data)
 	memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeCPU);
 }
 
-void OnnxRuntime::_run_inference(
+Option<OnnxRuntimeError> OnnxRuntime::run_inference_raw(
 	std::span<std::byte> input_data,
 	std::span<std::byte> output_data
 ) {
@@ -112,7 +114,7 @@ void OnnxRuntime::_run_inference(
 
 		const char* input_names{input_name.data()};
 		const char* output_names{output_name.data()};
-		Ort::RunOptions run_options;
+		const Ort::RunOptions run_options;
 
 		try {
 			session.Run(
@@ -121,8 +123,11 @@ void OnnxRuntime::_run_inference(
 			);
 		} catch (const Ort::Exception& exception) {
 			log_error_ort_exception(exception);
+			return OnnxRuntimeError::RunInferenceException;
 		}
 	}
+
+	return None;
 }
 
 void OnnxRuntime::check_ort_status(OrtStatus* status) {
@@ -130,12 +135,13 @@ void OnnxRuntime::check_ort_status(OrtStatus* status) {
 		return;
 
 	const auto st = Ort::Status(status);
-	std::string error_msg = st.GetErrorMessage();
-	OrtErrorCode error_code = st.GetErrorCode();
+	const std::string error_msg = st.GetErrorMessage();
+	const OrtErrorCode error_code = st.GetErrorCode();
 	if (error_code == ORT_OK)
 		return;
 
-	std::string_view formatted_error_code = format_ort_error_code(error_code);
+	const std::string_view formatted_error_code =
+		format_ort_error_code(error_code);
 
 	LOG_ERROR("OnnxRuntime error: {}, {}", formatted_error_code, error_msg);
 }
