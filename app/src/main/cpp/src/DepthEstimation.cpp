@@ -4,7 +4,7 @@
 #include "utils/Profiling.hpp"
 #include <algorithm>
 
-Option<TfLiteRuntimeError> run_depth_estimation(
+void run_depth_estimation(
 	TfLiteRuntime& tflite_runtime,
 	std::span<float> input,
 	std::span<float> output,
@@ -15,16 +15,12 @@ Option<TfLiteRuntimeError> run_depth_estimation(
 
 	normalize_rgb(input, mean, stddev);
 
-	if (const auto error =
-			tflite_runtime.run_inference<float, float>(input, output))
-		return error;
+	tflite_runtime.run_inference<float, float>(input, output);
 
 	min_max_scaling(output);
-
-	return None;
 }
 
-Option<OnnxRuntimeError> run_depth_estimation(
+void run_depth_estimation(
 	OnnxRuntime& onnx_runtime,
 	std::span<float> input_data,
 	std::span<float> output_data,
@@ -35,13 +31,9 @@ Option<OnnxRuntimeError> run_depth_estimation(
 
 	normalize_rgb(input_data, mean, stddev);
 
-	if (const auto error =
-			onnx_runtime.run_inference<float, float>(input_data, output_data))
-		return error;
+	onnx_runtime.run_inference<float, float>(input_data, output_data);
 
 	min_max_scaling(output_data);
-
-	return None;
 }
 
 void normalize_rgb(
@@ -84,18 +76,16 @@ void min_max_scaling(std::span<float> values) {
 
 static int inferno_depth_colormap(float relative_depth);
 
-Option<ColormapError> depth_colormap(
+void depth_colormap(
 	std::span<const float> depth_values,
 	std::span<int> colormapped_pixels
 ) {
 	if (depth_values.size() != colormapped_pixels.size())
-		return ColormapError::WrongOutputArraySize;
+		throw std::invalid_argument("depth_values and colormapped_pixels");
 
 	for (size_t i = 0; i < depth_values.size(); i++) {
 		colormapped_pixels[i] = inferno_depth_colormap(depth_values[i]);
 	}
-
-	return None;
 }
 
 constexpr size_t INFERNO_COLOR_COUNT = 256;

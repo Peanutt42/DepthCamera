@@ -6,6 +6,7 @@ Checks: >
   readability-*,
   bugprone-*,
   misc-*,
+  hicpp-noexcept-move,
   -fuchsia-*,
   -llvm-*,
   -readability-magic-numbers,

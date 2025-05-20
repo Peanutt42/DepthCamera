@@ -29,7 +29,7 @@ add_library(
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/DepthEstimation.hpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/DepthEstimation.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/utils/Log.hpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/src/utils/Error.hpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/utils/Exceptions.hpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/utils/NativeJavaScopes.hpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/utils/Profiling.hpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/utils/Profiling.cpp"
@@ -38,6 +38,7 @@ add_library(
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/tflite/TfLiteUtils.hpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/tflite/TfLiteRuntime.hpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/tflite/TfLiteRuntime.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/onnx/OnnxUtils.hpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/onnx/OnnxRuntime.hpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/onnx/OnnxRuntime.cpp"
 )
@@ -52,7 +53,7 @@ target_include_directories(NativeLib PUBLIC
 
 	${ONNXRUNTIME_INCLUDE_DIR}
 
-					# just so that vscode knows where to look for headers
+								# just so that vscode knows where to look for headers
 	"${CMAKE_SYSROOT}/usr/include/"
 	"${CMAKE_SYSROOT}/usr/include/c++/v1"
 	"${CMAKE_SYSROOT}/usr/include/${ANDROID_TOOLCHAIN_NAME}"

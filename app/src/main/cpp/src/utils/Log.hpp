@@ -1,6 +1,7 @@
 #pragma once
 
 #include <android/log.h>
+#include <exception>
 #include <format>
 
 template<typename... Args>
@@ -14,9 +15,9 @@ void formatted_log(int priority, const char* format, Args... args) {
 #define LOG_INFO(...) formatted_log(ANDROID_LOG_INFO, __VA_ARGS__)
 #define LOG_ERROR(...) formatted_log(ANDROID_LOG_ERROR, __VA_ARGS__)
 
-#define LOG_OPT_ERROR(...)                                                     \
-	{                                                                          \
-		if (const auto opt_error = __VA_ARGS__) {                              \
-			LOG_ERROR("{}", opt_error.value().message());                      \
-		}                                                                      \
+#define LOG_ON_EXCEPTION(...)                                                  \
+	try {                                                                      \
+		__VA_ARGS__                                                            \
+	} catch (const std::exception& e) {                                        \
+		LOG_ERROR("Unhanled exception: {}", e.what());                         \
 	}

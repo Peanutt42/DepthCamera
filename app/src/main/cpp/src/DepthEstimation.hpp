@@ -2,12 +2,12 @@
 
 #include "onnx/OnnxRuntime.hpp"
 #include "tflite/TfLiteRuntime.hpp"
-#include "utils/Error.hpp"
+#include "utils/Exceptions.hpp"
 #include <span>
 
 constexpr size_t RGB_CHANNELS = 3;
 
-Option<TfLiteRuntimeError> run_depth_estimation(
+void run_depth_estimation(
 	TfLiteRuntime& tflite_runtime,
 	std::span<float> input,
 	std::span<float> output,
@@ -15,7 +15,7 @@ Option<TfLiteRuntimeError> run_depth_estimation(
 	std::array<float, RGB_CHANNELS> stddev
 );
 
-Option<OnnxRuntimeError> run_depth_estimation(
+void run_depth_estimation(
 	OnnxRuntime& onnx_runtime,
 	std::span<float> input_data,
 	std::span<float> output_data,
@@ -36,7 +36,7 @@ void min_max_scaling(std::span<float> values);
 
 /// computes the int representation of the inferno colormap of the depth at each
 /// pixel
-Option<ColormapError> depth_colormap(
+void depth_colormap(
 	std::span<const float> depth_values,
 	std::span<int> colormapped_pixels
 );

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "utils/Error.hpp"
 #include "utils/Log.hpp"
 #include "utils/Profiling.hpp"
 #include <cassert>
@@ -12,90 +11,87 @@
 
 inline static std::string_view format_tflite_type(TfLiteType type);
 
+inline static std::string_view format_tflite_status(TfLiteStatus status);
+
 inline static bool is_tensor_quantized(const TfLiteTensor* tensor) {
 	return tensor->quantization.type == kTfLiteAffineQuantization;
 }
 
+class TfLiteStatusException : public std::runtime_error {
+  public:
+	explicit TfLiteStatusException(
+		TfLiteStatus status,
+		std::string_view context
+	)
+		: status(status), context(context),
+		  std::runtime_error(
+			  std::format("{}: {}", context, format_tflite_status(status))
+		  ) {}
+
+	std::string_view context;
+	TfLiteStatus status;
+};
+static void
+throw_on_tflite_status(TfLiteStatus status, std::string_view context) {
+	if (status != kTfLiteOk)
+		throw TfLiteStatusException(status, context);
+}
+
+class UnsupportedTypeQuantizationException : public std::runtime_error {
+  public:
+	explicit UnsupportedTypeQuantizationException(TfLiteType unsupported_type)
+		: std::runtime_error(
+			  std::format(
+				  "unsupported quantization type: {}",
+				  format_tflite_type(unsupported_type)
+			  )
+		  ) {}
+};
+
+class UnsupportedAsymmetricQuantizationException : public std::exception {
+  public:
+	[[nodiscard]] const char* what() const noexcept override {
+		return "asymmetric quantization unsupported";
+	}
+};
+
+class TensorNotYetCreatedException : public std::exception {
+  public:
+	[[nodiscard]] const char* what() const noexcept override {
+		return "tensor not yet created";
+	}
+};
+
+class WrongTypeException : public std::runtime_error {
+  public:
+	explicit WrongTypeException(
+		TfLiteType expected_type,
+		TfLiteType provided_type
+	)
+		: std::runtime_error(
+			  std::format(
+				  "invalid type of {}, expected {}",
+				  format_tflite_type(provided_type),
+				  format_tflite_type(expected_type)
+			  )
+		  ) {}
+};
+
 template<typename T>
-inline static Option<TfLiteRuntimeError> quantize(
+inline static void quantize(
 	std::span<const T> values,
 	std::span<std::byte> quantized_values,
 	TfLiteType quantized_type,
 	const TfLiteAffineQuantization& quantization
 );
 
-template<>
-Option<TfLiteRuntimeError> quantize<float>(
-	std::span<const float> values,
-	std::span<std::byte> quantized_values,
-	TfLiteType quantized_type,
-	const TfLiteAffineQuantization& quantization
-) {
-	PROFILE_DEPTH_FUNCTION()
-
-	if (quantized_type != kTfLiteUInt8)
-		return TfLiteRuntimeError::UnsupportedTypeQuantization;
-
-	if (values.size() != quantized_values.size())
-		return TfLiteRuntimeError::InvalidInputSize;
-
-	// for now, only 1 input, 1 output
-	if (quantization.scale->size != 1)
-		return TfLiteRuntimeError::UnsupportedAsymmetricQuantization;
-	const float quantization_scale = quantization.scale->data[0];
-	if (quantization.zero_point->size != 1)
-		return TfLiteRuntimeError::UnsupportedAsymmetricQuantization;
-	const int quantization_zero_point = quantization.zero_point->data[0];
-
-	for (size_t i = 0; i < values.size(); i++) {
-		static_assert(sizeof(std::byte) == sizeof(uint8_t));
-		quantized_values[i] =
-			(std::byte)((uint8_t)(values[i] / quantization_scale) +
-						quantization_zero_point);
-	}
-
-	return None;
-}
-
 template<typename T>
-inline static Option<TfLiteRuntimeError> dequantize(
+inline static void dequantize(
 	std::span<const std::byte> quantized_values,
 	std::span<T> real_values,
 	TfLiteType quantized_type,
 	const TfLiteAffineQuantization& quantization
 );
-template<>
-Option<TfLiteRuntimeError> dequantize<float>(
-	std::span<const std::byte> quantized_values,
-	std::span<float> real_values,
-	TfLiteType quantized_type,
-	const TfLiteAffineQuantization& quantization
-) {
-	PROFILE_DEPTH_FUNCTION()
-
-	if (quantized_type != kTfLiteUInt8)
-		return TfLiteRuntimeError::UnsupportedTypeQuantization;
-
-	if (quantized_values.size() != real_values.size())
-		return TfLiteRuntimeError::InvalidOutputSize;
-
-	// for now, only 1 input, 1 output
-	if (quantization.scale->size != 1)
-		return TfLiteRuntimeError::UnsupportedAsymmetricQuantization;
-	const float quantization_scale = quantization.scale->data[0];
-	if (quantization.zero_point->size != 1)
-		return TfLiteRuntimeError::UnsupportedAsymmetricQuantization;
-	const int quantization_zero_point = quantization.zero_point->data[0];
-
-	for (size_t i = 0; i < real_values.size(); i++) {
-		static_assert(sizeof(std::byte) == sizeof(uint8_t));
-		const auto quantized = (const uint8_t)quantized_values[i];
-		real_values[i] =
-			quantization_scale * (float)(quantized - quantization_zero_point);
-	}
-
-	return None;
-}
 
 inline static TfLiteDelegate* create_gpu_delegate(
 	std::string_view gpu_delegate_serialization_dir,
@@ -117,6 +113,68 @@ inline static TfLiteDelegate* create_gpu_delegate(
 	return TfLiteGpuDelegateV2Create(&gpu_delegate_options);
 }
 
+template<>
+void quantize<float>(
+	std::span<const float> values,
+	std::span<std::byte> quantized_values,
+	TfLiteType quantized_type,
+	const TfLiteAffineQuantization& quantization
+) {
+	PROFILE_DEPTH_FUNCTION()
+
+	if (quantized_type != kTfLiteUInt8)
+		throw UnsupportedTypeQuantizationException(quantized_type);
+
+	if (values.size() != quantized_values.size())
+		throw std::invalid_argument("values and quantized_values");
+
+	// for now, only 1 input, 1 output
+	if (quantization.scale->size != 1)
+		throw UnsupportedAsymmetricQuantizationException();
+	const float quantization_scale = quantization.scale->data[0];
+	if (quantization.zero_point->size != 1)
+		throw UnsupportedAsymmetricQuantizationException();
+	const int quantization_zero_point = quantization.zero_point->data[0];
+
+	for (size_t i = 0; i < values.size(); i++) {
+		static_assert(sizeof(std::byte) == sizeof(uint8_t));
+		quantized_values[i] =
+			(std::byte)((uint8_t)(values[i] / quantization_scale) +
+						quantization_zero_point);
+	}
+}
+
+template<>
+void dequantize<float>(
+	std::span<const std::byte> quantized_values,
+	std::span<float> real_values,
+	TfLiteType quantized_type,
+	const TfLiteAffineQuantization& quantization
+) {
+	PROFILE_DEPTH_FUNCTION()
+
+	if (quantized_type != kTfLiteUInt8)
+		throw UnsupportedTypeQuantizationException(quantized_type);
+
+	if (quantized_values.size() != real_values.size())
+		throw std::invalid_argument("real_values and quantized_values");
+
+	// for now, only 1 input, 1 output
+	if (quantization.scale->size != 1)
+		throw UnsupportedAsymmetricQuantizationException();
+	const float quantization_scale = quantization.scale->data[0];
+	if (quantization.zero_point->size != 1)
+		throw UnsupportedAsymmetricQuantizationException();
+	const int quantization_zero_point = quantization.zero_point->data[0];
+
+	for (size_t i = 0; i < real_values.size(); i++) {
+		static_assert(sizeof(std::byte) == sizeof(uint8_t));
+		const auto quantized = (const uint8_t)quantized_values[i];
+		real_values[i] =
+			quantization_scale * (float)(quantized - quantization_zero_point);
+	}
+}
+
 template<typename T>
 inline constexpr TfLiteType TFLITE_TYPE_FROM_TYPE = kTfLiteNoType;
 
@@ -136,10 +194,10 @@ template<> inline constexpr TfLiteType TFLITE_TYPE_FROM_TYPE<uint16_t> = kTfLite
 template<> inline constexpr TfLiteType TFLITE_TYPE_FROM_TYPE<TfLiteBFloat16> = kTfLiteBFloat16;
 // clang-format on
 
-inline static Option<size_t> get_tflite_type_size(TfLiteType type) {
+inline static std::optional<size_t> get_tflite_type_size(TfLiteType type) {
 	switch (type) {
 	default:
-		return None;
+		return std::nullopt;
 	case kTfLiteFloat32:
 		return sizeof(float);
 	case kTfLiteInt32:
@@ -216,7 +274,7 @@ std::string_view format_tflite_type(TfLiteType type) {
 	}
 }
 
-inline static std::string_view format_tflite_status(TfLiteStatus status) {
+std::string_view format_tflite_status(TfLiteStatus status) {
 	switch (status) {
 	case kTfLiteOk:
 		return "ok";
@@ -256,6 +314,3 @@ inline static void check_tflite_status(
 		format_tflite_status(status)
 	);
 }
-
-#define CHECK_TFLITE_STATUS(function, ...)                                     \
-	check_tflite_status(function(__VA_ARGS__), #function)

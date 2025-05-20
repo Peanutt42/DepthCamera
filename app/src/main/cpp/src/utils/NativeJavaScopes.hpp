@@ -21,11 +21,12 @@ struct NativeFloatArrayScope {
 	void operator=(const NativeFloatArrayScope&) = delete;
 	void operator=(NativeFloatArrayScope&&) = delete;
 
-	[[nodiscard]] std::span<const jfloat> as_span() const {
+	[[nodiscard]] explicit(false) operator std::span<const float>() const {
 		return native_array;
 	}
-
-	[[nodiscard]] std::span<jfloat> as_span() { return native_array; }
+	[[nodiscard]] explicit(false) operator std::span<float>() {
+		return native_array;
+	}
 
 	[[nodiscard]] size_t size() const { return native_array.size(); }
 
@@ -52,11 +53,12 @@ struct NativeByteArrayScope {
 	void operator=(const NativeByteArrayScope&) = delete;
 	void operator=(NativeByteArrayScope&&) = delete;
 
-	[[nodiscard]] std::span<const jbyte> as_span() const {
+	[[nodiscard]] explicit(false) operator std::span<const jbyte>() const {
 		return native_array;
 	}
-
-	[[nodiscard]] std::span<jbyte> as_span() { return native_array; }
+	[[nodiscard]] explicit(false) operator std::span<jbyte>() {
+		return native_array;
+	}
 
 	[[nodiscard]] size_t size() const { return native_array.size(); }
 
@@ -83,9 +85,12 @@ struct NativeIntArrayScope {
 	void operator=(NativeIntArrayScope&&) = delete;
 	void operator=(const NativeIntArrayScope&) = delete;
 
-	[[nodiscard]] std::span<const jint> as_span() const { return native_array; }
-
-	[[nodiscard]] std::span<jint> as_span() { return native_array; }
+	[[nodiscard]] explicit(false) operator std::span<const jint>() const {
+		return native_array;
+	}
+	[[nodiscard]] explicit(false) operator std::span<jint>() {
+		return native_array;
+	}
 
 	[[nodiscard]] size_t size() const { return native_array.size(); }
 
@@ -107,7 +112,9 @@ struct NativeStringScope {
 	void operator=(NativeStringScope&&) = delete;
 	void operator=(const NativeStringScope&) = delete;
 
-	[[nodiscard]] std::string_view get() const { return native_string; }
+	[[nodiscard]] explicit(false) operator std::string_view() const {
+		return native_string;
+	}
 
   private:
 	JNIEnv* env = nullptr;
