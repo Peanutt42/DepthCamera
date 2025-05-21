@@ -26,9 +26,7 @@
             android:textAlignment="center"
             android:textColor="@color/black"
             android:textSize="18sp"
-            android:textStyle="bold">
-
-        </TextView>
+            android:textStyle="bold" />
 
         <Button
             android:id="@+id/allow_camera_permission_btn"
@@ -39,9 +37,7 @@
             android:background="@drawable/rounded_button"
             android:text="@string/allow"
             android:textColor="@color/white"
-            android:textSize="18sp">
-
-        </Button>
+            android:textSize="18sp" />
 
     </LinearLayout>
 
@@ -61,7 +57,7 @@
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="@color/black" >
+            android:background="@color/black">
 
             <ImageView
                 android:id="@+id/depth_preview_image"
@@ -78,7 +74,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_marginHorizontal="5dp"
-            android:orientation="vertical" >
+            android:orientation="vertical">
 
             <CheckBox
                 android:id="@+id/enable_flashlight"
@@ -97,8 +93,25 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="0"
                 android:text=""
-                android:textColor="@color/white"/>
+                android:textColor="@color/white" />
 
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <Button
+                android:id="@+id/switch_model_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/rounded_button"
+                android:textColor="@color/white"
+                android:layout_marginHorizontal="20dp"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="40dp"
+                android:layout_weight="0"
+                android:text=""
+                android:contentDescription="@string/switch_model_button_description" />
         </LinearLayout>
 
     </RelativeLayout>

@@ -8,21 +8,19 @@ import androidx.core.graphics.scale
 import com.example.depthcamera.DepthCameraApp
 import com.example.depthcamera.NativeLib
 
-class MiDaSDepthModel(context: Context) : DepthModel {
-	private companion object {
-		private const val MODEL_NAME = "midas_v2_1_256x256.tflite"
-		private const val INPUT_IMAGE_DIM = 256
-		private val INPUT_IMAGE_SIZE = Size(INPUT_IMAGE_DIM, INPUT_IMAGE_DIM)
-		private val NORM_MEAN = floatArrayOf(123.675f, 116.28f, 103.53f)
-		private val NORM_STD = floatArrayOf(58.395f, 57.12f, 57.375f)
-	}
-
+class TfLiteDepthModel(
+	context: Context,
+	val fileName: String,
+	val inputDim: Int,
+	val normMean: FloatArray,
+	val normStddev: FloatArray
+) : DepthModel {
 	init {
-		val modelData = context.assets.open(MODEL_NAME).readBytes()
+		val modelData = context.assets.open(fileName).readBytes()
 
 		val gpuDelegateCacheDirectory =
 			createSerializedGpuDelegateCacheDirectory(context)
-		val modelToken = getModelToken(context, MODEL_NAME)
+		val modelToken = getModelToken(context, fileName)
 
 		// cleanup old cached gpu delegate files
 		if (gpuDelegateCacheDirectory.exists()) {
@@ -51,24 +49,32 @@ class MiDaSDepthModel(context: Context) : DepthModel {
 		NativeLib.shutdownDepthTfLiteRuntime()
 	}
 
-	override fun getName(): String = MODEL_NAME
+	override fun getName(): String = fileName
 
-	override fun getInputSize(): Size = INPUT_IMAGE_SIZE
+	override fun getInputSize(): Size = Size(inputDim, inputDim)
 
 	override fun predictDepth(input: Bitmap): FloatArray {
-		val scaled = input.scale(INPUT_IMAGE_DIM, INPUT_IMAGE_DIM)
+		if (normMean.size != 3 || normStddev.size != 3) {
+			Log.e(
+				DepthCameraApp.APP_LOG_TAG,
+				"normMean and normStddev should have exactly 3 elements for each rgb channel!"
+			)
+			return FloatArray(0)
+		}
+
+		val scaled = input.scale(inputDim, inputDim)
 		val input = NativeLib.bitmapToRgbHwc255FloatArray(scaled)
-		var output = FloatArray(INPUT_IMAGE_DIM * INPUT_IMAGE_DIM)
+		var output = FloatArray(inputDim * inputDim)
 
 		NativeLib.runDepthTfLiteInference(
 			input,
 			output,
-			NORM_MEAN[0],
-			NORM_MEAN[1],
-			NORM_MEAN[2],
-			NORM_STD[0],
-			NORM_STD[1],
-			NORM_STD[2]
+			normMean[0],
+			normMean[1],
+			normMean[2],
+			normStddev[0],
+			normStddev[1],
+			normStddev[2]
 		)
 
 		return output

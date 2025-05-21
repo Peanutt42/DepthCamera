@@ -8,6 +8,7 @@ import androidx.annotation.OptIn
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
+import com.example.depthcamera.DepthCameraApp
 import com.example.depthcamera.NativeLib
 import com.example.depthcamera.depth.DepthModel
 import kotlinx.coroutines.CoroutineScope
@@ -24,7 +25,7 @@ import java.util.concurrent.atomic.AtomicReference
  */
 @SuppressLint("SetTextI18n")
 class CameraFrameAnalyzer(
-	private var depthModel: DepthModel,
+	private var depthCameraApp: DepthCameraApp,
 	private var depthView: ImageView,
 	private var performanceText: TextView,
 ) : ImageAnalysis.Analyzer {
@@ -40,7 +41,7 @@ class CameraFrameAnalyzer(
 				if (frame != null) {
 					NativeLib.newDepthFrame()
 
-					val predictionOutput = depthModel.predictDepth(frame)
+					val predictionOutput = depthCameraApp.depthModel.predictDepth(frame)
 
 					val inputWidth = frame.width
 					val inputHeight = frame.height
@@ -48,14 +49,15 @@ class CameraFrameAnalyzer(
 					withContext(Dispatchers.Main) {
 						val colorMappedImage = NativeLib.depthColorMap(
 							predictionOutput,
-							depthModel.getInputSize()
+							depthCameraApp.depthModel.getInputSize()
 						)
 						depthView.setImageBitmap(colorMappedImage)
 
 						val formattedInputResolution = "${inputWidth}x${inputHeight}"
-						val modelName = depthModel.getName()
-						val modelInputSize = depthModel.getInputSize()
-						val formattedModelInputSize = "${modelInputSize.width}x${modelInputSize.height}"
+						val modelName = depthCameraApp.depthModel.getName()
+						val modelInputSize = depthCameraApp.depthModel.getInputSize()
+						val formattedModelInputSize =
+							"${modelInputSize.width}x${modelInputSize.height}"
 						performanceText.text =
 							"Model: $modelName\nCamera resolution: $formattedInputResolution --> Model input: $formattedModelInputSize\n\n${NativeLib.formatDepthFrame()}\n${NativeLib.formatCameraFrame()}"
 					}

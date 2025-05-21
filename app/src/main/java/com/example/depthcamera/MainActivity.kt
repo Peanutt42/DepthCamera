@@ -1,6 +1,8 @@
 package com.example.depthcamera
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
@@ -11,7 +13,9 @@ import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.camera.view.PreviewView
+import androidx.appcompat.app.AlertDialog
 import com.example.depthcamera.camera.CameraFrameAnalyzer
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 class MainActivity : ComponentActivity() {
 	private var permissionManager = PermissionManager(this, ::onCameraPermissionResult)
@@ -22,6 +26,7 @@ class MainActivity : ComponentActivity() {
 	private var cameraPermissionNotice: LinearLayout? = null
 	private var allowCameraPermission: Button? = null
 	private var enableFlashlightCheckbox: CheckBox? = null
+	private var switchModelButton: Button? = null
 
 	private var depthPreviewImage: ImageView? = null
 
@@ -56,9 +61,35 @@ class MainActivity : ComponentActivity() {
 			enableFlashlightCheckbox!!.isChecked = flashlightOn
 		}
 
+		switchModelButton = findViewById(R.id.switch_model_button)
+		switchModelButton!!.text = DepthCameraApp.MODELS[depthCameraApp().selectedModelIndex].name
+		switchModelButton!!.setOnClickListener {
+			val modelNames = DepthCameraApp.MODELS.map { it.name }.toTypedArray()
+
+			MaterialAlertDialogBuilder(this)
+				.setTitle("Select Depth Model")
+				.setSingleChoiceItems(
+					modelNames,
+					depthCameraApp().selectedModelIndex
+				) { dialog, which ->
+					val selectedPosition = (dialog as AlertDialog).listView.checkedItemPosition
+					if (selectedPosition >= 0) {
+						depthCameraApp().switchModel(selectedPosition)
+						switchModelButton!!.text =
+							DepthCameraApp.MODELS[depthCameraApp().selectedModelIndex].name
+					}
+
+					// close popup after small delay
+					Handler(Looper.getMainLooper()).postDelayed({
+						(dialog as AlertDialog).dismiss()
+					}, 200)
+				}
+				.show()
+		}
+
 		cameraFrameAnalyzer =
 			CameraFrameAnalyzer(
-				depthCameraApp().depthModel,
+				depthCameraApp(),
 				depthPreviewImage!!,
 				performanceText!!
 			)

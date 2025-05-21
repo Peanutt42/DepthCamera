@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.graphics.PixelFormat
 import android.media.Image
+import android.util.Log
 import android.util.Size
 
 /** Kotlin interface with NativeLib c++ code */
@@ -13,9 +14,9 @@ object NativeLib {
 	}
 
 	external fun newDepthFrame()
-    external fun formatDepthFrame(): String
-    external fun newCameraFrame()
-    external fun formatCameraFrame(): String
+	external fun formatDepthFrame(): String
+	external fun newCameraFrame()
+	external fun formatCameraFrame(): String
 
 	external fun initDepthTfLiteRuntime(
 		model: ByteArray,
@@ -61,6 +62,18 @@ object NativeLib {
 
 	/** @param input values should be between 0.0f and 1.0f */
 	fun depthColorMap(input: FloatArray, inputImageSize: Size): Bitmap {
+		if (input.size != inputImageSize.width * inputImageSize.height) {
+			Log.e(
+				DepthCameraApp.APP_LOG_TAG,
+				"input depth array length does not match output bitmap size"
+			)
+			return Bitmap.createBitmap(
+				inputImageSize.width,
+				inputImageSize.height,
+				Bitmap.Config.ARGB_8888
+			)
+		}
+
 		val colormappedPixels = IntArray(input.size)
 
 		depthColormap(input, colormappedPixels)

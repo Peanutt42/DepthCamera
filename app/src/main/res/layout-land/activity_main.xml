@@ -50,63 +50,82 @@
         android:layout_height="match_parent"
         android:orientation="horizontal">
 
-        <androidx.camera.view.PreviewView android:id="@+id/camera_view"
+        <androidx.camera.view.PreviewView
+            android:id="@+id/camera_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_weight="0.5"
             app:implementationMode="performance"
             app:scaleType="fitCenter" />
 
-    <RelativeLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_weight="0.5">
-
-        <FrameLayout
+        <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="@color/black" >
+            android:layout_weight="0.5">
 
-            <ImageView
-                android:id="@+id/depth_preview_image"
+            <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:scaleType="fitCenter"
-                android:adjustViewBounds="true"
-                android:contentDescription="@string/depth_preview_image_description" />
+                android:background="@color/black">
 
-        </FrameLayout>
+                <ImageView
+                    android:id="@+id/depth_preview_image"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="fitCenter"
+                    android:adjustViewBounds="true"
+                    android:contentDescription="@string/depth_preview_image_description" />
+
+            </FrameLayout>
 
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginTop="10dp"
-            android:layout_marginHorizontal="10dp"
-            android:orientation="vertical" >
-
-            <CheckBox
-                android:id="@+id/enable_flashlight"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="0"
-                android:layout_marginVertical="5dp"
-                android:buttonTint="@color/white"
-                android:contentDescription="@string/enable_flashlight_description"
-                android:text="@string/enable_flashlight"
-                android:textColor="@color/white" />
-
-            <TextView
-                android:id="@+id/performance_text"
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_weight="0"
-                android:text=""
-                android:textColor="@color/white"/>
+                android:layout_height="match_parent"
+                android:layout_marginTop="10dp"
+                android:layout_marginHorizontal="10dp"
+                android:orientation="vertical">
 
-        </LinearLayout>
+                <CheckBox
+                    android:id="@+id/enable_flashlight"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0"
+                    android:layout_marginVertical="5dp"
+                    android:buttonTint="@color/white"
+                    android:contentDescription="@string/enable_flashlight_description"
+                    android:text="@string/enable_flashlight"
+                    android:textColor="@color/white" />
 
-    </RelativeLayout>
+                <TextView
+                    android:id="@+id/performance_text"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0"
+                    android:text=""
+                    android:textColor="@color/white" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+                <Button
+                    android:id="@+id/switch_model_button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/rounded_button"
+                    android:textColor="@color/white"
+                    android:layout_marginHorizontal="20dp"
+                    android:layout_marginTop="20dp"
+                    android:layout_marginBottom="30dp"
+                    android:layout_weight="0"
+                    android:text=""
+                    android:contentDescription="@string/switch_model_button_description" />
+
+            </LinearLayout>
+
+        </RelativeLayout>
 
     </LinearLayout>
 

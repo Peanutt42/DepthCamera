@@ -7,6 +7,41 @@ import android.os.Build
 import android.util.Size
 import java.io.File
 
+/** All needed information to create and use a depth model */
+class DepthModelInfo(
+	val name: String,
+	val fileName: String,
+	val quantized: Boolean,
+	val inputDim: Int,
+	val normMean: FloatArray,
+	val normStddev: FloatArray
+) {
+	/** @return null if model type is not supported */
+	fun createDepthModel(context: Context): DepthModel? {
+		if (normMean.size != 3 || normStddev.size != 3) return null
+
+		if (fileName.endsWith(".tflite")) {
+			return TfLiteDepthModel(
+				context,
+				fileName,
+				inputDim,
+				normMean,
+				normStddev
+			)
+		} else if (fileName.endsWith(".onnx")) {
+			return OnnxModel(
+				context,
+				fileName,
+				inputDim,
+				normMean,
+				normStddev
+			)
+		}
+		
+		return null
+	}
+}
+
 /** Base class that all depth estimation models implement */
 interface DepthModel : AutoCloseable {
 	fun getName(): String
